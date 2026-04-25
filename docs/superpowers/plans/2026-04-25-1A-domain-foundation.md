@@ -210,7 +210,11 @@ addopts = [
     "--cov=grabatus_service_core",
     "--cov-branch",
     "--cov-report=term-missing",
-    "--cov-fail-under=100",
+    # The 100% coverage gate is enabled in Phase G (Task G1).
+    # During Phases A-F, coverage grows organically as modules are added.
+    # Enabling --cov-fail-under=100 from day one would fail Task A2 because
+    # there is no test code yet. The gate is enforced once the public API
+    # is wired and every domain module is in place.
 ]
 
 [tool.coverage.run]
@@ -1706,12 +1710,20 @@ def test_secret_ref_is_frozen() -> None:
         ref.name = "other"  # type: ignore[misc]
 
 
-def test_secret_ref_serializes_as_uri_string() -> None:
+def test_secret_ref_serializes_to_uri_string_in_json_mode() -> None:
     ref = SecretRef.model_validate("secret://gsm/bq/1")
 
-    dumped = ref.model_dump(mode="json")
+    dumped_json = ref.model_dump(mode="json")
 
-    assert dumped == "secret://gsm/bq/1"
+    assert dumped_json == "secret://gsm/bq/1"
+
+
+def test_secret_ref_keeps_structured_fields_in_python_mode() -> None:
+    ref = SecretRef.model_validate("secret://gsm/bq/1")
+
+    dumped_py = ref.model_dump(mode="python")
+
+    assert dumped_py == {"provider": "gsm", "name": "bq", "version": "1"}
 ```
 
 - [ ] **Step 2: Run test to verify failure**
@@ -1793,8 +1805,11 @@ class SecretRef(BaseModel):
             return f"{_SECRET_SCHEME}://{self.provider}/{self.name}"
         return f"{_SECRET_SCHEME}://{self.provider}/{self.name}/{self.version}"
 
-    @model_serializer
-    def _serialize(self) -> str:
+    @model_serializer(when_used="json")
+    def _serialize_for_json(self) -> str:
+        # JSON output collapses to the URI form so the contract round-trips
+        # through wire format. Python-mode dumping retains the structured
+        # fields (provider/name/version) which is what tests typically need.
         return self.to_uri()
 ```
 
@@ -4542,6 +4557,7 @@ from grabatus_service_core.testing import (
     InMemoryStorage,
     NullObservability,
     RecordingWebhookNotifier,
+    make_fake_compute_backend,
 )
 
 
@@ -4570,9 +4586,8 @@ def test_recording_webhook_notifier_is_webhook_port() -> None:
 
 
 def test_fake_compute_backend_is_compute_backend_port() -> None:
-    backend = FakeComputeBackend(
+    backend = make_fake_compute_backend(
         required_input_roles=frozenset({"timeseries"}),
-        optional_input_roles=frozenset(),
         output_roles=frozenset({"result"}),
         outputs={"result": b"x"},
     )
@@ -4623,6 +4638,7 @@ from grabatus_service_core.testing import (
     InMemoryStorage,
     NullObservability,
     RecordingWebhookNotifier,
+    make_fake_compute_backend,
 )
 
 
@@ -4750,9 +4766,8 @@ def test_recording_webhook_notifier_can_be_configured_to_fail() -> None:
 
 
 def test_fake_compute_backend_returns_configured_outputs() -> None:
-    backend = FakeComputeBackend(
+    backend = make_fake_compute_backend(
         required_input_roles=frozenset({"timeseries"}),
-        optional_input_roles=frozenset(),
         output_roles=frozenset({"result_json"}),
         outputs={"result_json": b"forecast-bytes"},
         metadata={"version": "1.0"},
@@ -4765,6 +4780,23 @@ def test_fake_compute_backend_returns_configured_outputs() -> None:
 
     assert result.by_role["result_json"] == b"forecast-bytes"
     assert result.metadata["version"] == "1.0"
+
+
+def test_make_fake_compute_backend_isolates_role_declarations() -> None:
+    backend_a = make_fake_compute_backend(
+        required_input_roles=frozenset({"timeseries"}),
+        output_roles=frozenset({"a_out"}),
+        outputs={"a_out": b"a"},
+    )
+    backend_b = make_fake_compute_backend(
+        required_input_roles=frozenset({"holidays"}),
+        output_roles=frozenset({"b_out"}),
+        outputs={"b_out": b"b"},
+    )
+
+    assert type(backend_a).REQUIRED_INPUT_ROLES == frozenset({"timeseries"})
+    assert type(backend_b).REQUIRED_INPUT_ROLES == frozenset({"holidays"})
+    assert type(backend_a) is not type(backend_b)
 
 
 def test_in_memory_secrets_adapter_resolves_seeded_token() -> None:
@@ -5137,8 +5169,38 @@ from typing import Any, ClassVar, Mapping
 from grabatus_service_core.ports.values import ComputeResult, LoadedInputs
 
 
+def make_fake_compute_backend(
+    *,
+    required_input_roles: frozenset[str],
+    optional_input_roles: frozenset[str] = frozenset(),
+    output_roles: frozenset[str],
+    outputs: Mapping[str, bytes],
+    metadata: Mapping[str, object] | None = None,
+) -> "FakeComputeBackend":
+    """Build a FakeComputeBackend whose role frozensets are configured per-call.
+
+    The role declarations live on a freshly created subclass so two
+    distinct fakes can declare different role sets in the same test file
+    without leaking state to each other.
+    """
+    cls_name = "FakeComputeBackend_Configured"
+    cls_namespace: dict[str, Any] = {
+        "REQUIRED_INPUT_ROLES": required_input_roles,
+        "OPTIONAL_INPUT_ROLES": optional_input_roles,
+        "OUTPUT_ROLES": output_roles,
+    }
+    configured_cls = type(cls_name, (FakeComputeBackend,), cls_namespace)
+    return configured_cls(outputs=outputs, metadata=metadata)
+
+
 class FakeComputeBackend:
-    """Test double for ComputeBackendPort with declarative outputs."""
+    """Test double for ComputeBackendPort with declarative outputs.
+
+    Direct instantiation declares no roles (empty frozensets). Tests that
+    need a backend with specific role declarations should call
+    :func:`make_fake_compute_backend` instead, which builds a configured
+    subclass whose ClassVars are isolated from other test instances.
+    """
 
     REQUIRED_INPUT_ROLES: ClassVar[frozenset[str]] = frozenset()
     OPTIONAL_INPUT_ROLES: ClassVar[frozenset[str]] = frozenset()
@@ -5147,16 +5209,9 @@ class FakeComputeBackend:
     def __init__(
         self,
         *,
-        required_input_roles: frozenset[str],
-        optional_input_roles: frozenset[str],
-        output_roles: frozenset[str],
         outputs: Mapping[str, bytes],
         metadata: Mapping[str, object] | None = None,
     ) -> None:
-        # Per-instance class-level vars are valid via __class__.__setattr__
-        type(self).REQUIRED_INPUT_ROLES = required_input_roles
-        type(self).OPTIONAL_INPUT_ROLES = optional_input_roles
-        type(self).OUTPUT_ROLES = output_roles
         self._outputs = dict(outputs)
         self._metadata = dict(metadata or {})
 
@@ -5164,8 +5219,6 @@ class FakeComputeBackend:
         del inputs, parameters
         return ComputeResult(by_role=self._outputs, metadata=self._metadata)
 ```
-
-> NOTE: mutating class attributes per instance is acceptable for a test fake; production `ComputeBackendPort` implementers declare class-level frozensets directly.
 
 - [ ] **Step 11: Implement `InMemorySecretsAdapter`**
 
@@ -5403,7 +5456,10 @@ def make_contract(
 
 from grabatus_service_core.testing.authorization import AllowAllPolicy
 from grabatus_service_core.testing.clock import FrozenClock
-from grabatus_service_core.testing.compute import FakeComputeBackend
+from grabatus_service_core.testing.compute import (
+    FakeComputeBackend,
+    make_fake_compute_backend,
+)
 from grabatus_service_core.testing.factories import (
     make_callback,
     make_contract,
@@ -5441,6 +5497,7 @@ __all__ = [
     "RecordingWebhookNotifier",
     "make_callback",
     "make_contract",
+    "make_fake_compute_backend",
     "make_envelope",
     "make_identity",
     "make_input_spec",
@@ -5642,10 +5699,32 @@ __all__ = [
 
 - [ ] **Step 4: Run tests, full coverage**
 
-Run: `uv run pytest`
+Run: `uv run pytest --cov=grabatus_service_core --cov-branch --cov-report=term-missing`
 Expected: All tests PASS, coverage 100%.
 
-- [ ] **Step 5: Run all quality gates one final time**
+- [ ] **Step 5: Enable the 100% coverage gate in `pyproject.toml`**
+
+Edit `pyproject.toml` `[tool.pytest.ini_options].addopts` to add `--cov-fail-under=100`:
+```toml
+addopts = [
+    "--strict-markers",
+    "--strict-config",
+    "-ra",
+    "--cov=grabatus_service_core",
+    "--cov-branch",
+    "--cov-report=term-missing",
+    "--cov-fail-under=100",
+]
+```
+
+(Replace the previous comment block in the same file.)
+
+- [ ] **Step 6: Re-run pytest to confirm the gate is green**
+
+Run: `uv run pytest`
+Expected: All tests PASS; the coverage gate prints `Required test coverage of 100% reached`.
+
+- [ ] **Step 7: Run all quality gates one final time**
 
 ```bash
 uv run ruff check .
@@ -5657,11 +5736,11 @@ uv run pre-commit run --all-files
 
 Expected: All exit 0.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 8: Commit**
 
 ```bash
-git add src/grabatus_service_core/__init__.py tests/unit/test_public_api.py
-git commit -m "feat: expose top-level public API; assert no cloud SDK imports"
+git add src/grabatus_service_core/__init__.py tests/unit/test_public_api.py pyproject.toml
+git commit -m "feat: expose top-level public API; enable 100% coverage gate"
 ```
 
 ---
