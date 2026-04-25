@@ -539,7 +539,7 @@ tests/
 ### 8.3 Test execution timing
 
 | Suite | Local | CI | Trigger |
-|-------|-------|----|---------| 
+|-------|-------|----|---------|
 | Unit | <5s | <10s | every push |
 | Property | <30s | <60s | every push |
 | Integration (emulators) | <60s | <90s | every push |
