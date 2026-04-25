@@ -2,5 +2,6 @@
 
 from grabatus_service_core.contract.envelope import Envelope
 from grabatus_service_core.contract.identity import Identity
+from grabatus_service_core.contract.references import References
 
-__all__ = ["Envelope", "Identity"]
+__all__ = ["Envelope", "Identity", "References"]
