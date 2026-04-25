@@ -74,3 +74,14 @@ def test_secret_ref_keeps_structured_fields_in_python_mode() -> None:
     dumped_py = ref.model_dump(mode="python")
 
     assert dumped_py == {"provider": "gsm", "name": "bq", "version": "1"}
+
+
+def test_secret_ref_accepts_structured_dict_input() -> None:
+    """The pre-validator passes through dict inputs untouched (no URI parsing)."""
+    ref = SecretRef.model_validate(
+        {"provider": "gsm", "name": "bq", "version": "1"},
+    )
+
+    assert ref.provider == "gsm"
+    assert ref.name == "bq"
+    assert ref.version == "1"
