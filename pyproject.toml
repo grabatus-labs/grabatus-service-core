@@ -30,7 +30,7 @@ dev = [
     "pytest-asyncio>=0.24",
     "pytest-cov>=5.0",
     "hypothesis>=6.115",
-    "atheris>=2.3",
+    'atheris>=2.3; sys_platform == "linux"',
     "mutmut>=2.5",
     "testcontainers>=4.8",
     "freezegun>=1.5",

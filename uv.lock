@@ -767,7 +767,7 @@ dependencies = [
 
 [package.optional-dependencies]
 dev = [
-    { name = "atheris" },
+    { name = "atheris", marker = "sys_platform == 'linux'" },
     { name = "bandit" },
     { name = "detect-secrets" },
     { name = "freezegun" },
@@ -789,7 +789,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "atheris", marker = "extra == 'dev'", specifier = ">=2.3" },
+    { name = "atheris", marker = "sys_platform == 'linux' and extra == 'dev'", specifier = ">=2.3" },
     { name = "bandit", marker = "extra == 'dev'", specifier = ">=1.7" },
     { name = "detect-secrets", marker = "extra == 'dev'", specifier = ">=1.5" },
     { name = "fastapi", specifier = ">=0.115" },
