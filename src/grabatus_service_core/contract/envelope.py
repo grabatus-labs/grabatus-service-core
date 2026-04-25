@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from typing import Literal
-from uuid import UUID  # noqa: TCH003  (Pydantic needs this at runtime)
+from uuid import UUID  # noqa: TCH003 — Pydantic v2 needs runtime access to UUID
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict
 
@@ -11,7 +11,7 @@ Origin = Literal["web", "api", "mcp", "internal"]
 ProtocolVersion = Literal["1.0"]
 
 
-class Envelope(BaseModel):  # type: ignore
+class Envelope(BaseModel):
     """Metadata that wraps every service request.
 
     Carries the protocol version (for forward/backward compatibility),
