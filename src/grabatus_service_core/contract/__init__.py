@@ -11,6 +11,7 @@ from grabatus_service_core.contract.format_hints import (
     XlsxHints,
 )
 from grabatus_service_core.contract.identity import Identity
+from grabatus_service_core.contract.io_spec import InputSpec
 from grabatus_service_core.contract.references import References
 from grabatus_service_core.contract.secret_ref import SecretRef
 from grabatus_service_core.contract.service_descriptor import ServiceDescriptor
@@ -22,6 +23,7 @@ __all__ = [
     "FormatHints",
     "Identity",
     "InlineHints",
+    "InputSpec",
     "JsonHints",
     "ParquetHints",
     "References",
