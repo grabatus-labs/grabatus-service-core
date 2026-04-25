@@ -51,3 +51,34 @@ class InputSpec(BaseModel):
                 f"match format={self.format!r}",
             )
         return self
+
+
+Compression = Literal["none", "gzip", "zstd"]
+WriteMode = Literal["overwrite", "append", "fail_if_exists"]
+
+
+class OutputSpec(BaseModel):
+    """Declarative description of an output the service must persist.
+
+    Carries the destination URI, format, optional compression, and a
+    write mode that adapters honor (overwrite/append/fail_if_exists).
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    role: str = Field(min_length=1, max_length=32, pattern=_ROLE_PATTERN)
+    destination_uri: AnyUrl
+    format: DataFormat
+    format_hints: FormatHints
+    compression: Compression = "none"
+    write_mode: WriteMode = "overwrite"
+    credential_ref: SecretRef | None = None
+
+    @model_validator(mode="after")
+    def _format_matches_hints(self) -> Self:
+        if self.format_hints.format != self.format:
+            raise ValueError(
+                f"format_hints.format={self.format_hints.format!r} does not "
+                f"match format={self.format!r}",
+            )
+        return self
