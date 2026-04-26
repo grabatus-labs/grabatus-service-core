@@ -7,7 +7,7 @@ directly; the wrappers translate PyJWT exceptions into our own
 
 from __future__ import annotations
 
-from typing import Any, cast
+from typing import Any
 
 import jwt
 from jwt.exceptions import InvalidTokenError
@@ -24,8 +24,7 @@ def encode_hs256(*, payload: dict[str, Any], secret: bytes) -> str:
         raise ValueError(
             f"HS256 secret must be at least {_MIN_SECRET_BYTES} bytes, got len={len(secret)}",
         )
-    # PyJWT 2.x returns str; the bundled type stubs still describe the 1.x bytes shape.
-    return cast("str", jwt.encode(payload, secret, algorithm=_ALGORITHM))
+    return jwt.encode(payload, secret, algorithm=_ALGORITHM)
 
 
 def decode_hs256(*, token: str, secret: bytes) -> dict[str, Any]:
