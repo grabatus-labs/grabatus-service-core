@@ -28,6 +28,8 @@ repos:
           - pydantic-settings>=2.5
           - structlog>=24.4
           - pyjwt>=2.9
+          - tenacity>=9.0
+          - httpx>=0.27
         args: [--strict, --config-file=pyproject.toml]
         files: ^src/
 
