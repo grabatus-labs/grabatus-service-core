@@ -83,6 +83,17 @@ strict = true
 warn_unreachable = true
 warn_unused_ignores = true
 files = ["src", "tests"]
+
+[[tool.mypy.overrides]]
+# Tests assert behavior on Pydantic frozen models by attempting to mutate them.
+# Those `obj.field = x` lines are intentional contract violations; they raise
+# at runtime. The corresponding `# type: ignore[misc]` was correct against
+# older mypy/pydantic-mypy combinations but the current pair flags it as
+# unused. Tests also exercise Literal-narrowed fields with literally-typed
+# wrong values to confirm validation. None of this is production code.
+module = ["tests.*"]
+warn_unused_ignores = false
+disable_error_code = ["assignment", "comparison-overlap", "union-attr", "call-overload", "arg-type"]
 # disallow_any_explicit is intentionally NOT enabled: Pydantic v2 BaseModel exposes
 # Any in inherited annotations (__pydantic_extra__, model_validate signatures).
 # The pydantic.mypy plugin would provide field-level Any safety, but is incompatible
@@ -102,11 +113,7 @@ addopts = [
     "--cov=grabatus_service_core",
     "--cov-branch",
     "--cov-report=term-missing",
-    # The 100% coverage gate is enabled in Phase G (Task G1).
-    # During Phases A-F, coverage grows organically as modules are added.
-    # Enabling --cov-fail-under=100 from day one would fail Task A2 because
-    # there is no test code yet. The gate is enforced once the public API
-    # is wired and every domain module is in place.
+    "--cov-fail-under=100",
 ]
 
 [tool.coverage.run]
