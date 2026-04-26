@@ -2,11 +2,13 @@
 
 from grabatus_service_core.security.host_blocklist import HostBlocklist
 from grabatus_service_core.security.scheme_allowlist import SchemeAllowlist
+from grabatus_service_core.security.tenant_prefix_policy import TenantPrefixPolicy
 from grabatus_service_core.security.uri_parser import ParsedUri, parse_uri
 
 __all__ = [
     "HostBlocklist",
     "ParsedUri",
     "SchemeAllowlist",
+    "TenantPrefixPolicy",
     "parse_uri",
 ]
