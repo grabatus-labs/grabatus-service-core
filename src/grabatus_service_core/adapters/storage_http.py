@@ -13,11 +13,11 @@ from grabatus_service_core.errors import (
     OutputWriteError,
     UnsupportedSchemeError,
 )
-from grabatus_service_core.security.host_blocklist import HostBlocklist
 
 if TYPE_CHECKING:
     from grabatus_service_core.contract.io_spec import InputSpec, OutputSpec
     from grabatus_service_core.ports.values import Credentials, WriteReceipt
+    from grabatus_service_core.security.host_blocklist import HostBlocklist
 
 
 _HTTP_SCHEMES = frozenset({"http", "https"})

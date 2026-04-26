@@ -17,17 +17,27 @@ _FORBIDDEN_TOP_LEVEL_IMPORTS = (
 
 
 def test_importing_top_level_does_not_load_cloud_sdks() -> None:
-    # Drop already-loaded modules (other tests may have loaded them) so we
-    # can observe what a *fresh* import of grabatus_service_core pulls in.
-    for module_name in list(sys.modules):
-        if module_name.startswith("grabatus_service_core"):
-            del sys.modules[module_name]
-    importlib.import_module("grabatus_service_core")
-    for forbidden in _FORBIDDEN_TOP_LEVEL_IMPORTS:
-        assert forbidden not in sys.modules, (
-            f"Top-level import of grabatus_service_core pulled in "
-            f"{forbidden!r}, which is forbidden in Sub-Plan 1A."
-        )
+    # Snapshot sys.modules so we can restore it and avoid polluting other tests.
+    original_modules = dict(sys.modules)
+    try:
+        # Drop already-loaded modules — both grabatus_service_core itself and the
+        # forbidden cloud SDKs (other tests may have loaded them) — so we can
+        # observe what a *fresh* import of grabatus_service_core pulls in.
+        for module_name in list(sys.modules):
+            if module_name.startswith("grabatus_service_core") or any(
+                module_name == forbidden or module_name.startswith(forbidden + ".")
+                for forbidden in _FORBIDDEN_TOP_LEVEL_IMPORTS
+            ):
+                del sys.modules[module_name]
+        importlib.import_module("grabatus_service_core")
+        for forbidden in _FORBIDDEN_TOP_LEVEL_IMPORTS:
+            assert forbidden not in sys.modules, (
+                f"Top-level import of grabatus_service_core pulled in "
+                f"{forbidden!r}, which is forbidden in Sub-Plan 1A."
+            )
+    finally:
+        sys.modules.clear()
+        sys.modules.update(original_modules)
 
 
 def test_top_level_exposes_version() -> None:
