@@ -85,6 +85,18 @@ warn_unused_ignores = true
 files = ["src", "tests"]
 
 [[tool.mypy.overrides]]
+# google-cloud-* libraries do not ship type stubs (no py.typed marker as of
+# late 2025). Allow imports without forcing every adapter to add per-line
+# ignores. Adapter source still calls typed surface (api_core exceptions
+# imported from a sibling module that *does* have hints we control).
+module = [
+    "google.cloud.*",
+    "google.api_core.*",
+    "google.auth.*",
+]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
 # Tests assert behavior on Pydantic frozen models by attempting to mutate them.
 # Those `obj.field = x` lines are intentional contract violations; they raise
 # at runtime. The corresponding `# type: ignore[misc]` was correct against
