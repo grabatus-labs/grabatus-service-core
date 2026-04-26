@@ -1,5 +1,6 @@
 """Pydantic v2 schemas defining the platform-service protocol."""
 
+from grabatus_service_core.contract.callback import Callback
 from grabatus_service_core.contract.envelope import Envelope
 from grabatus_service_core.contract.format_hints import (
     BigQueryHints,
@@ -18,6 +19,7 @@ from grabatus_service_core.contract.service_descriptor import ServiceDescriptor
 
 __all__ = [
     "BigQueryHints",
+    "Callback",
     "CsvHints",
     "Envelope",
     "FormatHints",
