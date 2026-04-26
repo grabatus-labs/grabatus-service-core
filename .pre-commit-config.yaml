@@ -27,6 +27,8 @@ repos:
           - pydantic>=2.7
           - pydantic-settings>=2.5
           - structlog>=24.4
+          - pyjwt>=2.9
+          - types-pyjwt
         args: [--strict, --config-file=pyproject.toml]
         files: ^src/
 
