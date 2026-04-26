@@ -6,15 +6,15 @@ from typing import Generic, Self, TypeVar
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from grabatus_service_core.contract.callback import Callback  # noqa: TCH001 — runtime
-from grabatus_service_core.contract.envelope import Envelope  # noqa: TCH001 — runtime
-from grabatus_service_core.contract.identity import Identity  # noqa: TCH001 — runtime
-from grabatus_service_core.contract.io_spec import (  # noqa: TCH001 — runtime
+from grabatus_service_core.contract.callback import Callback
+from grabatus_service_core.contract.envelope import Envelope
+from grabatus_service_core.contract.identity import Identity
+from grabatus_service_core.contract.io_spec import (
     InputSpec,
     OutputSpec,
 )
-from grabatus_service_core.contract.references import References  # noqa: TCH001
-from grabatus_service_core.contract.service_descriptor import (  # noqa: TCH001
+from grabatus_service_core.contract.references import References
+from grabatus_service_core.contract.service_descriptor import (
     ServiceDescriptor,
 )
 
@@ -24,7 +24,7 @@ _MAX_OUTPUTS = 10
 ParamsT = TypeVar("ParamsT", bound=BaseModel)
 
 
-class BaseServiceContract(BaseModel, Generic[ParamsT]):
+class BaseServiceContract(BaseModel, Generic[ParamsT]):  # noqa: UP046
     """Generic top-level contract that wraps every service request.
 
     A concrete service parameterizes this with its own ``Parameters``
