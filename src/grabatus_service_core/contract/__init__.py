@@ -1,5 +1,6 @@
 """Pydantic v2 schemas defining the platform-service protocol."""
 
+from grabatus_service_core.contract.base import BaseServiceContract
 from grabatus_service_core.contract.callback import Callback
 from grabatus_service_core.contract.envelope import Envelope
 from grabatus_service_core.contract.format_hints import (
@@ -16,8 +17,14 @@ from grabatus_service_core.contract.io_spec import InputSpec, OutputSpec
 from grabatus_service_core.contract.references import References
 from grabatus_service_core.contract.secret_ref import SecretRef
 from grabatus_service_core.contract.service_descriptor import ServiceDescriptor
+from grabatus_service_core.contract.version import (
+    SUPPORTED_PROTOCOL_VERSIONS,
+    is_protocol_version_supported,
+)
 
 __all__ = [
+    "SUPPORTED_PROTOCOL_VERSIONS",
+    "BaseServiceContract",
     "BigQueryHints",
     "Callback",
     "CsvHints",
@@ -33,4 +40,5 @@ __all__ = [
     "SecretRef",
     "ServiceDescriptor",
     "XlsxHints",
+    "is_protocol_version_supported",
 ]
