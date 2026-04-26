@@ -1,0 +1,29 @@
+"""build_app: assemble a FastAPI instance around a ServiceRunner."""
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+from fastapi import FastAPI
+
+if TYPE_CHECKING:
+    from grabatus_service_core.contract.base import ParamsT
+    from grabatus_service_core.ports.observability import ObservabilityPort
+    from grabatus_service_core.runner import ServiceRunner
+
+
+def build_app(
+    *,
+    runner: ServiceRunner[ParamsT],
+    observability: ObservabilityPort,
+) -> FastAPI:
+    """Return a fully wired FastAPI app bound to the supplied runner."""
+    app = FastAPI(title="grabatus-service-core", version="0.1.0")
+    app.state.runner = runner
+    app.state.observability = observability
+
+    @app.get("/health/live")
+    def _health_live() -> dict[str, str]:
+        return {"status": "ok"}
+
+    return app
