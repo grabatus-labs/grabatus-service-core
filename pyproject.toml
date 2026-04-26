@@ -67,6 +67,15 @@ ignore = ["S101", "ANN101", "ANN102", "PLR0913"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**/*.py" = ["S", "ANN", "PLR2004"]
+# Ports are Protocol stubs; **kwargs on logger/observability methods are
+# intentionally Any (the whole point of a structured-log abstraction is to
+# accept arbitrary fields). ANN401 has no useful signal here.
+"src/grabatus_service_core/ports/**/*.py" = ["ANN401"]
+# Pydantic v2 needs runtime access to field annotations even when
+# `from __future__ import annotations` is in effect — moving these imports
+# under TYPE_CHECKING breaks model construction. Disable TC001/TC002/TC003
+# for the contract package only.
+"src/grabatus_service_core/contract/**/*.py" = ["TC001", "TC002", "TC003"]
 
 [tool.mypy]
 python_version = "3.12"

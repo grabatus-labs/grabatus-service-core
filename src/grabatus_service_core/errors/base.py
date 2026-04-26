@@ -32,7 +32,7 @@ class GrabatusServiceError(Exception):
     ) -> None:
         if "error_code" not in type(self).__dict__ and not hasattr(type(self), "error_code"):
             raise NotImplementedError(
-                f"{type(self).__name__} must declare a class-level " f"'error_code' attribute"
+                f"{type(self).__name__} must declare a class-level 'error_code' attribute"
             )
         if type(self) is GrabatusServiceError:
             raise NotImplementedError(

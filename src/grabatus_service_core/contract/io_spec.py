@@ -12,10 +12,10 @@ from pydantic import (
     model_validator,
 )
 
-from grabatus_service_core.contract.format_hints import (  # noqa: TCH001 — Pydantic v2 needs runtime access to FormatHints
+from grabatus_service_core.contract.format_hints import (
     FormatHints,
 )
-from grabatus_service_core.contract.secret_ref import (  # noqa: TCH001 — Pydantic v2 needs runtime access to SecretRef
+from grabatus_service_core.contract.secret_ref import (
     SecretRef,
 )
 

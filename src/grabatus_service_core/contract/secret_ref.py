@@ -43,13 +43,12 @@ class SecretRef(BaseModel):
         parsed = urlparse(uri)
         if parsed.scheme != _SECRET_SCHEME:
             raise ValueError(
-                f"SecretRef requires scheme='{_SECRET_SCHEME}://', "
-                f"got scheme={parsed.scheme!r}",
+                f"SecretRef requires scheme='{_SECRET_SCHEME}://', got scheme={parsed.scheme!r}",
             )
         provider = parsed.netloc
         if not provider:
             raise ValueError(
-                f"SecretRef requires a provider after 'secret://', " f"got uri={uri!r}",
+                f"SecretRef requires a provider after 'secret://', got uri={uri!r}",
             )
         path = parsed.path.lstrip("/")
         if not path:

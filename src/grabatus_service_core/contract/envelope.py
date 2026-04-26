@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from typing import Literal
-from uuid import UUID  # noqa: TCH003 — Pydantic v2 needs runtime access to UUID
+from uuid import UUID
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict
 
