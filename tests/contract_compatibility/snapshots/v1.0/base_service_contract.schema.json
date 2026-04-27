@@ -1,0 +1,577 @@
+{
+  "$defs": {
+    "BigQueryHints": {
+      "additionalProperties": false,
+      "description": "Hints for BigQuery sources or destinations.",
+      "properties": {
+        "format": {
+          "const": "bigquery",
+          "title": "Format",
+          "type": "string"
+        },
+        "location": {
+          "default": "US",
+          "maxLength": 32,
+          "minLength": 1,
+          "title": "Location",
+          "type": "string"
+        },
+        "query": {
+          "anyOf": [
+            {
+              "maxLength": 8192,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Query"
+        }
+      },
+      "required": [
+        "format"
+      ],
+      "title": "BigQueryHints",
+      "type": "object"
+    },
+    "Callback": {
+      "additionalProperties": false,
+      "description": "Webhook destination the service notifies after the pipeline finishes.\n\nOnly HTTPS URLs are accepted. The signing scheme is constrained to a\nclosed set; ``jwt_hs256`` is the only scheme supported in v1.0.",
+      "properties": {
+        "auth_scheme": {
+          "const": "jwt_hs256",
+          "title": "Auth Scheme",
+          "type": "string"
+        },
+        "url": {
+          "format": "uri",
+          "maxLength": 2083,
+          "minLength": 1,
+          "title": "Url",
+          "type": "string"
+        }
+      },
+      "required": [
+        "url",
+        "auth_scheme"
+      ],
+      "title": "Callback",
+      "type": "object"
+    },
+    "CsvHints": {
+      "additionalProperties": false,
+      "description": "Hints for reading or writing CSV files.",
+      "properties": {
+        "delimiter": {
+          "default": ",",
+          "maxLength": 4,
+          "minLength": 1,
+          "title": "Delimiter",
+          "type": "string"
+        },
+        "encoding": {
+          "default": "utf-8",
+          "maxLength": 32,
+          "minLength": 1,
+          "title": "Encoding",
+          "type": "string"
+        },
+        "format": {
+          "const": "csv",
+          "title": "Format",
+          "type": "string"
+        }
+      },
+      "required": [
+        "format"
+      ],
+      "title": "CsvHints",
+      "type": "object"
+    },
+    "EmptySnapshotParameters": {
+      "additionalProperties": false,
+      "description": "Parameters payload with no fields, used by the snapshot harness.",
+      "properties": {},
+      "title": "EmptySnapshotParameters",
+      "type": "object"
+    },
+    "Envelope": {
+      "additionalProperties": false,
+      "description": "Metadata that wraps every service request.\n\nCarries the protocol version (for forward/backward compatibility),\na unique request_id (used as the idempotency key end-to-end), the\ncreation timestamp, and the origin channel of the request.",
+      "properties": {
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "origin": {
+          "enum": [
+            "web",
+            "api",
+            "mcp",
+            "internal"
+          ],
+          "title": "Origin",
+          "type": "string"
+        },
+        "protocol_version": {
+          "const": "1.0",
+          "title": "Protocol Version",
+          "type": "string"
+        },
+        "request_id": {
+          "format": "uuid",
+          "title": "Request Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "protocol_version",
+        "request_id",
+        "created_at",
+        "origin"
+      ],
+      "title": "Envelope",
+      "type": "object"
+    },
+    "Identity": {
+      "additionalProperties": false,
+      "description": "Who is making the request.\n\nThe ``tenant_id`` slug drives URI authorization (a request scoped to\ntenant ``grabatus`` may only access buckets/datasets prefixed with\n``grabatus``). Slug is restricted to lowercase letters, digits, and\nhyphens to prevent path-traversal and case-folding ambiguity.",
+      "properties": {
+        "tenant_id": {
+          "maxLength": 64,
+          "minLength": 1,
+          "pattern": "^[a-z0-9-]+$",
+          "title": "Tenant Id",
+          "type": "string"
+        },
+        "user_id": {
+          "maxLength": 64,
+          "minLength": 1,
+          "title": "User Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "user_id",
+        "tenant_id"
+      ],
+      "title": "Identity",
+      "type": "object"
+    },
+    "InlineHints": {
+      "additionalProperties": false,
+      "description": "Hints for inline payloads (small data embedded in the URI).",
+      "properties": {
+        "format": {
+          "const": "inline",
+          "title": "Format",
+          "type": "string"
+        }
+      },
+      "required": [
+        "format"
+      ],
+      "title": "InlineHints",
+      "type": "object"
+    },
+    "InputSpec": {
+      "additionalProperties": false,
+      "description": "Declarative description of an input to be loaded by the service.\n\nEach input carries a service-defined ``role`` (e.g. ``timeseries``,\n``holidays``) which the service's ``ComputeBackendPort`` declares as\nrequired or optional. The library validates roles at contract time.\n\nThe ``format_hints`` discriminator must match the ``format`` field; a\nmismatch is rejected by the validator at model creation.",
+      "properties": {
+        "credential_ref": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SecretRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "format": {
+          "enum": [
+            "xlsx",
+            "csv",
+            "json",
+            "parquet",
+            "bigquery",
+            "inline"
+          ],
+          "title": "Format",
+          "type": "string"
+        },
+        "format_hints": {
+          "discriminator": {
+            "mapping": {
+              "bigquery": "#/$defs/BigQueryHints",
+              "csv": "#/$defs/CsvHints",
+              "inline": "#/$defs/InlineHints",
+              "json": "#/$defs/JsonHints",
+              "parquet": "#/$defs/ParquetHints",
+              "xlsx": "#/$defs/XlsxHints"
+            },
+            "propertyName": "format"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/XlsxHints"
+            },
+            {
+              "$ref": "#/$defs/CsvHints"
+            },
+            {
+              "$ref": "#/$defs/JsonHints"
+            },
+            {
+              "$ref": "#/$defs/ParquetHints"
+            },
+            {
+              "$ref": "#/$defs/BigQueryHints"
+            },
+            {
+              "$ref": "#/$defs/InlineHints"
+            }
+          ],
+          "title": "Format Hints"
+        },
+        "role": {
+          "maxLength": 32,
+          "minLength": 1,
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "title": "Role",
+          "type": "string"
+        },
+        "source_uri": {
+          "format": "uri",
+          "minLength": 1,
+          "title": "Source Uri",
+          "type": "string"
+        }
+      },
+      "required": [
+        "role",
+        "source_uri",
+        "format",
+        "format_hints"
+      ],
+      "title": "InputSpec",
+      "type": "object"
+    },
+    "JsonHints": {
+      "additionalProperties": false,
+      "description": "Hints for reading or writing JSON files.",
+      "properties": {
+        "format": {
+          "const": "json",
+          "title": "Format",
+          "type": "string"
+        }
+      },
+      "required": [
+        "format"
+      ],
+      "title": "JsonHints",
+      "type": "object"
+    },
+    "OutputSpec": {
+      "additionalProperties": false,
+      "description": "Declarative description of an output the service must persist.\n\nCarries the destination URI, format, optional compression, and a\nwrite mode that adapters honor (overwrite/append/fail_if_exists).",
+      "properties": {
+        "compression": {
+          "default": "none",
+          "enum": [
+            "none",
+            "gzip",
+            "zstd"
+          ],
+          "title": "Compression",
+          "type": "string"
+        },
+        "credential_ref": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SecretRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "destination_uri": {
+          "format": "uri",
+          "minLength": 1,
+          "title": "Destination Uri",
+          "type": "string"
+        },
+        "format": {
+          "enum": [
+            "xlsx",
+            "csv",
+            "json",
+            "parquet",
+            "bigquery",
+            "inline"
+          ],
+          "title": "Format",
+          "type": "string"
+        },
+        "format_hints": {
+          "discriminator": {
+            "mapping": {
+              "bigquery": "#/$defs/BigQueryHints",
+              "csv": "#/$defs/CsvHints",
+              "inline": "#/$defs/InlineHints",
+              "json": "#/$defs/JsonHints",
+              "parquet": "#/$defs/ParquetHints",
+              "xlsx": "#/$defs/XlsxHints"
+            },
+            "propertyName": "format"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/XlsxHints"
+            },
+            {
+              "$ref": "#/$defs/CsvHints"
+            },
+            {
+              "$ref": "#/$defs/JsonHints"
+            },
+            {
+              "$ref": "#/$defs/ParquetHints"
+            },
+            {
+              "$ref": "#/$defs/BigQueryHints"
+            },
+            {
+              "$ref": "#/$defs/InlineHints"
+            }
+          ],
+          "title": "Format Hints"
+        },
+        "role": {
+          "maxLength": 32,
+          "minLength": 1,
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "title": "Role",
+          "type": "string"
+        },
+        "write_mode": {
+          "default": "overwrite",
+          "enum": [
+            "overwrite",
+            "append",
+            "fail_if_exists"
+          ],
+          "title": "Write Mode",
+          "type": "string"
+        }
+      },
+      "required": [
+        "role",
+        "destination_uri",
+        "format",
+        "format_hints"
+      ],
+      "title": "OutputSpec",
+      "type": "object"
+    },
+    "ParquetHints": {
+      "additionalProperties": false,
+      "description": "Hints for reading or writing Parquet files.",
+      "properties": {
+        "format": {
+          "const": "parquet",
+          "title": "Format",
+          "type": "string"
+        },
+        "partition": {
+          "anyOf": [
+            {
+              "maxLength": 256,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Partition"
+        }
+      },
+      "required": [
+        "format"
+      ],
+      "title": "ParquetHints",
+      "type": "object"
+    },
+    "References": {
+      "additionalProperties": false,
+      "description": "Opaque IDs from the Grabatus platform.\n\nThe service does not interpret these \u2014 they are echoed back in the\nwebhook callback so the platform can correlate the response with its\nown database records.",
+      "properties": {
+        "parameter_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Parameter Id",
+          "type": "string"
+        },
+        "result_id": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Result Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "parameter_id",
+        "result_id"
+      ],
+      "title": "References",
+      "type": "object"
+    },
+    "SecretRef": {
+      "additionalProperties": false,
+      "description": "Typed reference to a secret stored in a secret manager.\n\nWire format: ``secret://<provider>/<name>[/<version>]``. Examples::\n\n    secret://gcp-secret-manager/bq-reader/3\n    secret://gcp-secret-manager/webhook-signing-key  # implies latest\n\nThe ``SecretsPort`` resolves a ``SecretRef`` to actual credential bytes\nat runtime. The reference itself is safe to log \u2014 it does not contain\nthe secret value.",
+      "properties": {
+        "name": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "provider": {
+          "maxLength": 64,
+          "minLength": 1,
+          "title": "Provider",
+          "type": "string"
+        },
+        "version": {
+          "default": "latest",
+          "maxLength": 32,
+          "minLength": 1,
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "provider",
+        "name"
+      ],
+      "title": "SecretRef",
+      "type": "object"
+    },
+    "ServiceDescriptor": {
+      "additionalProperties": false,
+      "description": "Identifies which service handles the request and at what version.\n\nService ``name`` is a lowercase slug; ``version`` is strict\n``MAJOR.MINOR.PATCH`` semver \u2014 pre-release and build metadata are not\naccepted in the contract (services release stable versions only).",
+      "properties": {
+        "name": {
+          "maxLength": 64,
+          "minLength": 1,
+          "pattern": "^[a-z][a-z0-9_-]*$",
+          "title": "Name",
+          "type": "string"
+        },
+        "version": {
+          "maxLength": 32,
+          "minLength": 5,
+          "pattern": "^\\d+\\.\\d+\\.\\d+$",
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "version"
+      ],
+      "title": "ServiceDescriptor",
+      "type": "object"
+    },
+    "XlsxHints": {
+      "additionalProperties": false,
+      "description": "Hints for reading or writing Excel spreadsheets.",
+      "properties": {
+        "format": {
+          "const": "xlsx",
+          "title": "Format",
+          "type": "string"
+        },
+        "header": {
+          "default": 0,
+          "maximum": 128,
+          "minimum": 0,
+          "title": "Header",
+          "type": "integer"
+        },
+        "sheet": {
+          "default": "Sheet1",
+          "maxLength": 64,
+          "minLength": 1,
+          "title": "Sheet",
+          "type": "string"
+        }
+      },
+      "required": [
+        "format"
+      ],
+      "title": "XlsxHints",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Concrete contract used by the snapshot tests.",
+  "properties": {
+    "callback": {
+      "$ref": "#/$defs/Callback"
+    },
+    "envelope": {
+      "$ref": "#/$defs/Envelope"
+    },
+    "identity": {
+      "$ref": "#/$defs/Identity"
+    },
+    "inputs": {
+      "items": {
+        "$ref": "#/$defs/InputSpec"
+      },
+      "maxItems": 10,
+      "minItems": 1,
+      "title": "Inputs",
+      "type": "array"
+    },
+    "outputs": {
+      "items": {
+        "$ref": "#/$defs/OutputSpec"
+      },
+      "maxItems": 10,
+      "minItems": 1,
+      "title": "Outputs",
+      "type": "array"
+    },
+    "parameters": {
+      "$ref": "#/$defs/EmptySnapshotParameters"
+    },
+    "references": {
+      "$ref": "#/$defs/References"
+    },
+    "service": {
+      "$ref": "#/$defs/ServiceDescriptor"
+    }
+  },
+  "required": [
+    "envelope",
+    "identity",
+    "references",
+    "service",
+    "inputs",
+    "outputs",
+    "callback",
+    "parameters"
+  ],
+  "title": "SnapshotContract",
+  "type": "object"
+}

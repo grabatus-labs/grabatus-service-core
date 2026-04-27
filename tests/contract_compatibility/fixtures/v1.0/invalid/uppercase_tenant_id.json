@@ -1,0 +1,43 @@
+{
+  "envelope": {
+    "protocol_version": "1.0",
+    "request_id": "11111111-1111-4111-8111-111111111111",
+    "created_at": "2026-04-26T00:00:00Z",
+    "origin": "internal"
+  },
+  "identity": {
+    "user_id": "user-1",
+    "tenant_id": "GRABATUS"
+  },
+  "references": {
+    "parameter_id": "p-1",
+    "result_id": "r-1"
+  },
+  "service": {
+    "name": "echo",
+    "version": "0.0.1"
+  },
+  "inputs": [
+    {
+      "role": "payload",
+      "source_uri": "inline://hello",
+      "format": "inline",
+      "format_hints": {"format": "inline"}
+    }
+  ],
+  "outputs": [
+    {
+      "role": "echoed",
+      "destination_uri": "inline://echoed",
+      "format": "inline",
+      "format_hints": {"format": "inline"},
+      "compression": "none",
+      "write_mode": "overwrite"
+    }
+  ],
+  "callback": {
+    "url": "https://example.com/callback",
+    "auth_scheme": "jwt_hs256"
+  },
+  "parameters": {}
+}

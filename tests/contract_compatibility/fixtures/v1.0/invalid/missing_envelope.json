@@ -1,0 +1,37 @@
+{
+  "identity": {
+    "user_id": "user-1",
+    "tenant_id": "grabatus"
+  },
+  "references": {
+    "parameter_id": "p-1",
+    "result_id": "r-1"
+  },
+  "service": {
+    "name": "echo",
+    "version": "0.0.1"
+  },
+  "inputs": [
+    {
+      "role": "payload",
+      "source_uri": "inline://hello",
+      "format": "inline",
+      "format_hints": {"format": "inline"}
+    }
+  ],
+  "outputs": [
+    {
+      "role": "echoed",
+      "destination_uri": "inline://echoed",
+      "format": "inline",
+      "format_hints": {"format": "inline"},
+      "compression": "none",
+      "write_mode": "overwrite"
+    }
+  ],
+  "callback": {
+    "url": "https://example.com/callback",
+    "auth_scheme": "jwt_hs256"
+  },
+  "parameters": {}
+}
