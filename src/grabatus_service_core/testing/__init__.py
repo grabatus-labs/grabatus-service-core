@@ -1,5 +1,8 @@
 """Public test fakes and factories. Imported by every downstream service test."""
 
+from grabatus_service_core.receiver.registry import (
+    ServiceRegistry as InMemoryServiceRegistry,
+)
 from grabatus_service_core.testing.authorization import AllowAllPolicy, RejectAllPolicy
 from grabatus_service_core.testing.clock import FrozenClock
 from grabatus_service_core.testing.compute import (
@@ -12,6 +15,7 @@ from grabatus_service_core.testing.factories import (
     make_envelope,
     make_identity,
     make_input_spec,
+    make_opaque_contract,
     make_output_spec,
     make_references,
     make_service_descriptor,
@@ -36,6 +40,7 @@ __all__ = [
     "InMemoryJobDispatcher",
     "InMemoryMessagePort",
     "InMemorySecretsAdapter",
+    "InMemoryServiceRegistry",
     "InMemoryStorage",
     "NullObservability",
     "RecordedDispatch",
@@ -48,6 +53,7 @@ __all__ = [
     "make_fake_compute_backend",
     "make_identity",
     "make_input_spec",
+    "make_opaque_contract",
     "make_output_spec",
     "make_references",
     "make_service_descriptor",

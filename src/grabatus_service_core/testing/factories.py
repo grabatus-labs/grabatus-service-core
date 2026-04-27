@@ -18,6 +18,9 @@ from grabatus_service_core.contract import (
     References,
     ServiceDescriptor,
 )
+from grabatus_service_core.contract.opaque import (
+    OpaqueServiceContract,
+)
 
 if TYPE_CHECKING:
     from grabatus_service_core.contract.io_spec import Compression
@@ -109,6 +112,38 @@ def make_callback(
     auth_scheme: str = "jwt_hs256",
 ) -> Callback:
     return Callback.model_validate({"url": url, "auth_scheme": auth_scheme})
+
+
+def make_opaque_contract(
+    *,
+    parameters: dict[str, Any] | None = None,
+    service_name: str = "sample",
+    envelope: Envelope | None = None,
+    identity: Identity | None = None,
+    references: References | None = None,
+    inputs: list[InputSpec] | None = None,
+    outputs: list[OutputSpec] | None = None,
+    callback: Callback | None = None,
+) -> OpaqueServiceContract:
+    """Build an OpaqueServiceContract for receiver-side tests.
+
+    Example:
+        >>> contract = make_opaque_contract(parameters={"foo": "bar"}, service_name="forecast")
+        >>> contract.service.name
+        'forecast'
+    """
+    return OpaqueServiceContract.model_validate(
+        {
+            "envelope": (envelope or make_envelope()).model_dump(mode="json"),
+            "identity": (identity or make_identity()).model_dump(mode="json"),
+            "references": (references or make_references()).model_dump(mode="json"),
+            "service": make_service_descriptor(name=service_name).model_dump(mode="json"),
+            "inputs": [spec.model_dump(mode="json") for spec in (inputs or [make_input_spec()])],
+            "outputs": [spec.model_dump(mode="json") for spec in (outputs or [make_output_spec()])],
+            "callback": (callback or make_callback()).model_dump(mode="json"),
+            "parameters": parameters or {},
+        },
+    )
 
 
 def make_contract(  # noqa: UP047 — TypeVar form needed for runtime BaseServiceContract[type(parameters)]
