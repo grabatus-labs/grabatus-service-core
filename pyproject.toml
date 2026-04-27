@@ -42,6 +42,7 @@ dev = [
     "pre-commit>=4.0",
     "sphinx>=8.0",
     "sphinx-autoapi>=3.3",
+    "sphinx-intl>=2.3",
     "furo>=2024.8",
     "myst-parser>=4.0",
 ]
