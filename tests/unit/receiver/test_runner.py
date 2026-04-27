@@ -1,11 +1,30 @@
 """SharedReceiverRunner: value objects (execute body added in next task)."""
 
+import json
+from base64 import b64encode
 from uuid import uuid4
 
 import pytest
 
+from grabatus_service_core.adapters.message_pubsub import PubSubMessagePort
+from grabatus_service_core.contract.opaque import OpaqueParameters, OpaqueServiceContract
+from grabatus_service_core.ports.values import RawMessage
+from grabatus_service_core.receiver.registry import ServiceRegistry
 from grabatus_service_core.receiver.runner import (
     ReceiverExecutionResult,
+    SharedReceiverAdapters,
+    SharedReceiverRunner,
+)
+from grabatus_service_core.security.scheme_allowlist import SchemeAllowlist
+from grabatus_service_core.testing import (
+    AllowAllPolicy,
+    FrozenClock,
+    InMemoryJobDispatcher,
+    NullObservability,
+)
+from grabatus_service_core.testing.factories import (
+    make_contract,
+    make_service_descriptor,
 )
 
 
@@ -32,3 +51,80 @@ def test_receiver_execution_result_is_frozen() -> None:
     )
     with pytest.raises((AttributeError, TypeError)):
         result.status = "error"  # type: ignore[misc]
+
+
+def _build_opaque_contract(parameters: dict, service_name: str) -> OpaqueServiceContract:
+    """Build an OpaqueServiceContract via the existing make_contract factory."""
+    return make_contract(
+        parameters=OpaqueParameters.model_validate(parameters),
+        service=make_service_descriptor(name=service_name),
+    )
+
+
+def _build_pubsub_raw_message(contract: OpaqueServiceContract) -> RawMessage:
+    """Wrap a contract in the {"message": {"data": <base64-JSON>}} envelope."""
+    inner_json = json.dumps(contract.model_dump(mode="json")).encode("utf-8")
+    wrapper = {"message": {"data": b64encode(inner_json).decode("ascii")}}
+    return RawMessage(payload=json.dumps(wrapper).encode("utf-8"))
+
+
+def _build_runner_with_registry(registry: ServiceRegistry) -> SharedReceiverRunner:
+    return SharedReceiverRunner(
+        adapters=SharedReceiverAdapters(
+            message=PubSubMessagePort(),
+            authorizer=AllowAllPolicy(),
+            job_dispatcher=InMemoryJobDispatcher(),
+            observability=NullObservability(),
+            clock=FrozenClock("2026-04-27T12:00:00Z"),
+        ),
+        scheme_allowlist=SchemeAllowlist(allowed={"gs", "bigquery", "secret"}),
+        registry=registry,
+    )
+
+
+def test_execute_happy_path_dispatches_to_correct_worker() -> None:
+    contract = _build_opaque_contract({"any": "thing"}, service_name="forecast")
+    raw = _build_pubsub_raw_message(contract)
+    runner = _build_runner_with_registry(
+        ServiceRegistry(by_name={"forecast": "grabatus-forecasting-worker"}),
+    )
+
+    result = runner.execute(raw)
+
+    assert result.status == "ok"
+    assert result.error is None
+    assert result.request_id == contract.envelope.request_id
+    dispatcher = runner.adapters.job_dispatcher
+    assert isinstance(dispatcher, InMemoryJobDispatcher)
+    assert len(dispatcher.dispatched) == 1
+    assert dispatcher.dispatched[0].job_name == "grabatus-forecasting-worker"
+    assert result.dispatched_job_id is not None
+
+
+def test_execute_serializes_full_validated_contract_into_payload() -> None:
+    contract = _build_opaque_contract({"x": 1}, service_name="forecast")
+    raw = _build_pubsub_raw_message(contract)
+    runner = _build_runner_with_registry(
+        ServiceRegistry(by_name={"forecast": "grabatus-forecasting-worker"}),
+    )
+
+    runner.execute(raw)
+
+    dispatcher = runner.adapters.job_dispatcher
+    assert isinstance(dispatcher, InMemoryJobDispatcher)
+    parsed = json.loads(dispatcher.dispatched[0].payload.decode("utf-8"))
+    assert parsed["service"]["name"] == "forecast"
+    assert parsed["parameters"] == {"x": 1}
+    assert parsed["envelope"]["request_id"] == str(contract.envelope.request_id)
+
+
+def test_execute_error_branch_covers_malformed_message() -> None:
+    """One test exercising the error branch; full error-type coverage is added in CP4.3."""
+    runner = _build_runner_with_registry(ServiceRegistry(by_name={"forecast": "fc"}))
+    raw = RawMessage(payload=b"not-json")
+
+    result = runner.execute(raw)
+
+    assert result.status == "error"
+    assert result.error is not None
+    assert result.dispatched_job_id is None
