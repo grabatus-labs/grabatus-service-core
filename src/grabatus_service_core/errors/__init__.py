@@ -9,6 +9,7 @@ from grabatus_service_core.errors.contract import (
     ContractError,
     InvalidContractError,
     MalformedMessageError,
+    UnknownServiceError,
     UnsupportedProtocolVersionError,
 )
 from grabatus_service_core.errors.io import (
@@ -46,6 +47,7 @@ __all__ = [
     "SecurityError",
     "StorageError",
     "UnauthorizedUriError",
+    "UnknownServiceError",
     "UnsupportedProtocolVersionError",
     "UnsupportedSchemeError",
     "WebhookAuthError",

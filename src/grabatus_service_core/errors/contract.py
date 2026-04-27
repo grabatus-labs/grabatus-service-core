@@ -29,3 +29,9 @@ class UnsupportedProtocolVersionError(ContractError):
     """Raised when the envelope's protocol_version is not supported."""
 
     error_code = "unsupported_protocol_version"
+
+
+class UnknownServiceError(ContractError):
+    """Raised when the receiver's registry has no worker for envelope.service.name."""
+
+    error_code = "unknown_service"
