@@ -22,6 +22,7 @@ class RuntimeMode(StrEnum):
     RECEIVER = "receiver"
     WORKER = "worker"
     MONOLITH = "monolith"
+    SHARED_RECEIVER = "shared-receiver"
 
 
 _DEFAULT_ALLOWED_SCHEMES: frozenset[str] = frozenset({"gs", "bigquery", "secret"})
