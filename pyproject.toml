@@ -128,10 +128,7 @@ addopts = [
     "--cov=grabatus_service_core",
     "--cov-branch",
     "--cov-report=term-missing",
-    # The 100% gate is re-enabled at the end of Sub-Plan 1B (Task I3) once
-    # every adapter is in place. During 1B we add modules incrementally and
-    # would otherwise fail the gate even though every committed module is
-    # itself 100% covered.
+    "--cov-fail-under=100",
 ]
 
 [tool.coverage.run]
