@@ -22,6 +22,8 @@ from grabatus_service_core.contract.secret_ref import (
 _ROLE_PATTERN = r"^[a-z][a-z0-9_]*$"
 
 DataFormat = Literal["xlsx", "csv", "json", "parquet", "bigquery", "inline"]
+Compression = Literal["none", "gzip", "zstd"]
+WriteMode = Literal["overwrite", "append", "fail_if_exists"]
 
 
 class InputSpec(BaseModel):
@@ -41,6 +43,7 @@ class InputSpec(BaseModel):
     source_uri: AnyUrl
     format: DataFormat
     format_hints: FormatHints
+    compression: Compression = "none"
     credential_ref: SecretRef | None = None
 
     @model_validator(mode="after")
@@ -51,10 +54,6 @@ class InputSpec(BaseModel):
                 f"match format={self.format!r}",
             )
         return self
-
-
-Compression = Literal["none", "gzip", "zstd"]
-WriteMode = Literal["overwrite", "append", "fail_if_exists"]
 
 
 class OutputSpec(BaseModel):

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import Any, TypeVar, cast
+from typing import TYPE_CHECKING, Any, TypeVar, cast
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -18,6 +18,9 @@ from grabatus_service_core.contract import (
     References,
     ServiceDescriptor,
 )
+
+if TYPE_CHECKING:
+    from grabatus_service_core.contract.io_spec import Compression
 
 _DEFAULT_REQUEST_ID = UUID("a3f9c21e-bf38-4e75-9a2f-c89b6c3f2d12")
 _DEFAULT_CREATED_AT = datetime(2026, 4, 25, 12, 0, 0, tzinfo=UTC)
@@ -70,12 +73,14 @@ def make_input_spec(
     source_uri: str = "gs://gbt-storage-grabatus/user_999/in.xlsx",
     fmt: str = "xlsx",
     hints: dict[str, Any] | None = None,
+    compression: Compression = "none",
 ) -> InputSpec:
     payload: dict[str, Any] = {
         "role": role,
         "source_uri": source_uri,
         "format": fmt,
         "format_hints": hints or {"format": fmt, "sheet": "Dados"},
+        "compression": compression,
     }
     return InputSpec.model_validate(payload)
 
@@ -86,12 +91,14 @@ def make_output_spec(
     destination_uri: str = "gs://gbt-storage-grabatus/user_999/out.json",
     fmt: str = "json",
     hints: dict[str, Any] | None = None,
+    compression: Compression = "none",
 ) -> OutputSpec:
     payload: dict[str, Any] = {
         "role": role,
         "destination_uri": destination_uri,
         "format": fmt,
         "format_hints": hints or {"format": fmt},
+        "compression": compression,
     }
     return OutputSpec.model_validate(payload)
 

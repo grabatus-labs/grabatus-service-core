@@ -181,6 +181,16 @@
       "additionalProperties": false,
       "description": "Declarative description of an input to be loaded by the service.\n\nEach input carries a service-defined ``role`` (e.g. ``timeseries``,\n``holidays``) which the service's ``ComputeBackendPort`` declares as\nrequired or optional. The library validates roles at contract time.\n\nThe ``format_hints`` discriminator must match the ``format`` field; a\nmismatch is rejected by the validator at model creation.",
       "properties": {
+        "compression": {
+          "default": "none",
+          "enum": [
+            "none",
+            "gzip",
+            "zstd"
+          ],
+          "title": "Compression",
+          "type": "string"
+        },
         "credential_ref": {
           "anyOf": [
             {
