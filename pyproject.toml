@@ -115,6 +115,7 @@ disable_error_code = ["assignment", "comparison-overlap", "union-attr", "call-ov
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["."]
 asyncio_mode = "auto"
 markers = [
     "gcp_real: requires real GCP project credentials",
