@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 from fastapi import FastAPI
 
 from grabatus_service_core.app.exception_handler import register_exception_handlers
+from grabatus_service_core.app.middleware import install_request_context_middleware
 from grabatus_service_core.app.routes import make_router
 
 if TYPE_CHECKING:
@@ -24,6 +25,7 @@ def build_app(
     app = FastAPI(title="grabatus-service-core", version="0.1.0")
     app.state.runner = runner
     app.state.observability = observability
+    install_request_context_middleware(app)
     app.include_router(make_router())
     register_exception_handlers(app)
     return app
