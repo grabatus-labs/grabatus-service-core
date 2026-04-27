@@ -344,7 +344,7 @@ services/grabatus-forecasting/
 ├── tests/                             # unit + property + integration + contract + fuzz
 ├── data/
 │   └── grabatus_forecast_template_v1.xlsx   # MANTIDO (fixture)
-├── docs/                              # NOVO — Sphinx
+├── docs/                              # NOVO — Sphinx (English only, default theme)
 ├── scripts/
 │   ├── run_local.py                   # SUBSTITUI run_model_locally.py
 │   └── plot_forecast.py               # NOVO — visualização separada
@@ -457,7 +457,10 @@ dependencies = [
 [project.optional-dependencies]
 dev = [pytest, pytest-asyncio, pytest-cov, hypothesis, atheris, mutmut, testcontainers,
        freezegun, ruff, mypy, bandit, pip-audit, detect-secrets, sphinx, sphinx-autoapi,
-       furo, myst-parser]
+       myst-parser]
+# Sphinx theme: default (alabaster) — no Furo, no custom theming.
+# Documentation: English only, simple language, code examples wherever
+# usage might be unclear. No pt-BR i18n on new service docs.
 
 [tool.uv.sources]
 # Para dev local com mudanças simultâneas na lib
@@ -786,6 +789,19 @@ Paralelizações possíveis:
 - ✅ Receiver tem `run.invoker` apenas nos workers registrados.
 - ✅ Zero incidentes de unauthorized URI nos primeiros 7 dias.
 - ✅ JWT do webhook resolvido via Secret Manager (nunca env var direta).
+
+## 11.5 Documentation style (Sphinx)
+
+Confirmed by user during spec review on 2026-04-27:
+
+- **English only.** No pt-BR i18n on new service docs (`services/grabatus-forecasting/docs/`). Library docs that already have pt-BR translations (commit `2c9a854`) keep them as exception, but no new translation work is added by Plano 2.
+- **Simple, intuitive language.** Short sentences, plain words, active voice.
+- **Examples in confusing places.** Wherever a reader might be unsure how to use something (factory args, contract shape, env vars, deploy command), include a code example. Default to showing, not telling.
+- **Default Sphinx theme.** `html_theme = "alabaster"` (the stock default). No Furo, no RTD theme, no custom CSS.
+
+This applies to:
+- `services/grabatus-forecasting/docs/conf.py` (new repo).
+- Any new tutorial or reference page added to `grabatus-service-core/docs/` as part of Plano 2 (e.g. `tutorials/deploying_the_shared_receiver.rst`) — written in English with the default theme even though the lib also has Furo+i18n setup.
 
 ## 12. Questões em aberto
 
