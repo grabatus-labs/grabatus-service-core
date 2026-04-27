@@ -21,6 +21,11 @@ def make_router() -> APIRouter:
     def _health_live() -> dict[str, str]:
         return {"status": "ok"}
 
+    @router.get("/health/ready")
+    def _health_ready(request: Request) -> dict[str, str]:
+        runner = request.app.state.runner
+        return {"status": "ready", "mode": runner.mode.value}
+
     @router.post("/run_service")
     async def _run_service(request: Request) -> dict[str, Any]:
         raw_bytes = await request.body()

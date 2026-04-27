@@ -74,3 +74,15 @@ def test_build_app_responds_to_health_live() -> None:
 
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
+
+
+def test_build_app_responds_to_health_ready() -> None:
+    app = build_app(runner=_runner(), observability=NullObservability())
+    client = TestClient(app)
+
+    response = client.get("/health/ready")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "ready"
+    assert body["mode"] == RuntimeMode.MONOLITH.value
