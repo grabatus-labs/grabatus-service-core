@@ -2,14 +2,11 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping  # noqa: TC003 — needed at runtime for pydantic field resolution
 from dataclasses import dataclass
 from types import MappingProxyType
-from typing import TYPE_CHECKING
 
 from grabatus_service_core.errors import UnknownServiceError
-
-if TYPE_CHECKING:
-    from collections.abc import Mapping
 
 
 @dataclass(frozen=True, slots=True)

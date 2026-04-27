@@ -13,6 +13,8 @@ from typing import Annotated, Literal
 from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
+from grabatus_service_core.receiver.registry import ServiceRegistry
+
 
 class RuntimeMode(StrEnum):
     """Selects the pipeline branch a process executes."""
@@ -44,6 +46,9 @@ class Settings(BaseSettings):
         default=_DEFAULT_ALLOWED_SCHEMES,
     )
     allowed_hosts: Annotated[frozenset[str], NoDecode] = Field(default=frozenset())
+    service_registry: Annotated[ServiceRegistry, NoDecode] = Field(
+        default_factory=lambda: ServiceRegistry(by_name={}),
+    )
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = Field(default="INFO")
     trace_sample_rate: float = Field(default=1.0, ge=0.0, le=1.0)
     worker_job_name: str | None = Field(default=None)
@@ -54,4 +59,11 @@ class Settings(BaseSettings):
     def _split_csv(cls, value: object) -> object:
         if isinstance(value, str):
             return frozenset(item.strip() for item in value.split(",") if item.strip())
+        return value
+
+    @field_validator("service_registry", mode="before")
+    @classmethod
+    def _parse_service_registry(cls, value: object) -> object:
+        if isinstance(value, str):
+            return ServiceRegistry.from_env_string(value)
         return value
