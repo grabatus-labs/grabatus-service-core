@@ -95,6 +95,7 @@ module = [
     "google.auth.*",
     "opentelemetry.exporter.cloud_trace",
     "opentelemetry.exporter.cloud_monitoring",
+    "atheris",
 ]
 ignore_missing_imports = true
 

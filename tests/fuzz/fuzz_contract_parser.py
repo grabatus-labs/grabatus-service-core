@@ -1,0 +1,47 @@
+"""Fuzz the BaseServiceContract JSON parser.
+
+Run locally on Linux::
+
+    uv run python tests/fuzz/fuzz_contract_parser.py -atheris_runs=10000
+
+CI runs this for a 60-second budget on every push to ``main``.
+
+Invariant: validating arbitrary bytes either succeeds (well-formed
+contract) or raises ``ValidationError``. Any other exception is a
+fuzz finding.
+"""
+
+from __future__ import annotations
+
+import sys
+
+from pydantic import BaseModel, ValidationError
+
+from grabatus_service_core.contract.base import BaseServiceContract
+
+
+class _EmptyParameters(BaseModel):
+    """Parameters payload for fuzz harness — no fields, accepts anything Pydantic allows."""
+
+
+_ContractType = BaseServiceContract[_EmptyParameters]
+
+
+def fuzz_one_input(data: bytes) -> None:
+    try:
+        _ContractType.model_validate_json(data)
+    except ValidationError:
+        return
+    except (UnicodeDecodeError, ValueError):
+        return
+
+
+def main() -> None:  # pragma: no cover  # entry point only on Linux runners
+    import atheris  # noqa: PLC0415  # atheris is Linux-only
+
+    atheris.Setup(sys.argv, fuzz_one_input)
+    atheris.Fuzz()
+
+
+if __name__ == "__main__":  # pragma: no cover  # CLI guard
+    main()

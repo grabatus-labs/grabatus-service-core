@@ -20,6 +20,7 @@ htmlcov/
 .mutmut-cache
 coverage.xml
 *.cover
+.hypothesis/
 
 # Type checking
 .mypy_cache/
