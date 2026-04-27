@@ -1,6 +1,6 @@
 """Public test fakes and factories. Imported by every downstream service test."""
 
-from grabatus_service_core.testing.authorization import AllowAllPolicy
+from grabatus_service_core.testing.authorization import AllowAllPolicy, RejectAllPolicy
 from grabatus_service_core.testing.clock import FrozenClock
 from grabatus_service_core.testing.compute import (
     FakeComputeBackend,
@@ -41,6 +41,7 @@ __all__ = [
     "RecordedDispatch",
     "RecordedWebhookCall",
     "RecordingWebhookNotifier",
+    "RejectAllPolicy",
     "make_callback",
     "make_contract",
     "make_envelope",
