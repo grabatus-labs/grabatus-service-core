@@ -71,5 +71,5 @@ def main() -> int:  # pragma: no cover  # integration-tested via examples/
     )
 
 
-if __name__ == "__main__":  # pragma: no cover
+if __name__ == "__main__":  # pragma: no cover  # CLI entry only
     sys.exit(main())

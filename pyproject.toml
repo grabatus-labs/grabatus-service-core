@@ -109,7 +109,23 @@ ignore_missing_imports = true
 # wrong values to confirm validation. None of this is production code.
 module = ["tests.*"]
 warn_unused_ignores = false
-disable_error_code = ["assignment", "comparison-overlap", "union-attr", "call-overload", "arg-type", "call-arg"]
+# ``no-untyped-call`` is disabled because tests construct unstubbed
+# google-api-core exception types (Forbidden, NotFound, ServiceUnavailable)
+# directly as fakes — those classes have no type stubs, but the calls
+# are intentional and well-typed at the call site.
+# ``var-annotated`` is disabled because ExecutionResult and a few other
+# generics need explicit type parameters that add no information in test
+# scaffolding (the type is obvious from the constructor args).
+disable_error_code = [
+    "assignment",
+    "comparison-overlap",
+    "union-attr",
+    "call-overload",
+    "arg-type",
+    "call-arg",
+    "no-untyped-call",
+    "var-annotated",
+]
 # disallow_any_explicit is intentionally NOT enabled: Pydantic v2 BaseModel exposes
 # Any in inherited annotations (__pydantic_extra__, model_validate signatures).
 # The pydantic.mypy plugin would provide field-level Any safety, but is incompatible

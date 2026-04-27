@@ -87,10 +87,13 @@ def test_setup_uses_cloud_monitoring_exporter_in_production_when_available(
         def __init__(self, *args: object, **kwargs: object) -> None:
             captured["constructed"] = True
 
-        def export(self, *args: object, **kwargs: object) -> object:  # pragma: no cover
+        # The next two methods are required by the abstract base but are
+        # never invoked: the test only constructs the exporter to verify
+        # cloud-monitoring branch coverage in setup_opentelemetry.
+        def export(self, *args: object, **kwargs: object) -> object:  # pragma: no cover  # stub
             return None
 
-        def force_flush(self, timeout_millis: float = 0) -> bool:  # pragma: no cover
+        def force_flush(self, timeout_millis: float = 0) -> bool:  # pragma: no cover  # stub
             return True
 
         def shutdown(self, timeout_millis: float = 0, **kwargs: object) -> None:

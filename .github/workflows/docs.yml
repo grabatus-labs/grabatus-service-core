@@ -1,0 +1,63 @@
+name: Docs
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: docs-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
+      - run: uv python install 3.12
+      - run: uv sync --extra dev
+
+      - name: Build English site
+        run: uv run sphinx-build -W -b html docs docs/_build/html/en
+
+      - name: Build Portuguese site
+        run: uv run sphinx-build -W -b html -D language=pt_BR docs docs/_build/html/pt_BR
+
+      - name: Add bilingual landing redirect
+        run: |
+          cat > docs/_build/html/index.html <<'HTML'
+          <!doctype html>
+          <html><head>
+            <meta charset="utf-8">
+            <meta http-equiv="refresh" content="0; url=./en/">
+            <title>grabatus-service-core</title>
+          </head><body>
+            <p>Redirecting to <a href="./en/">English documentation</a>.
+            See also <a href="./pt_BR/">Portuguese (Brazilian)</a>.</p>
+          </body></html>
+          HTML
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/_build/html
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,124 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  lint-and-type-check:
+    name: Lint, format, types
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
+      - name: Set up Python
+        run: uv python install 3.12
+
+      - name: Install dependencies
+        run: uv sync --extra dev
+
+      - name: ruff check
+        run: uv run ruff check .
+
+      - name: ruff format check
+        run: uv run ruff format --check .
+
+      - name: mypy strict
+        run: uv run mypy --strict src/ tests/
+
+  security:
+    name: Security gates
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
+      - run: uv python install 3.12
+      - run: uv sync --extra dev
+
+      - name: bandit
+        run: uv run bandit -r src/ -ll
+
+      - name: pip-audit
+        run: uv run pip-audit --strict
+
+      - name: detect-secrets
+        run: uv run detect-secrets scan --baseline .secrets.baseline
+
+      - name: pragma comments justification
+        run: uv run python scripts/check_pragma_comments.py
+
+  test:
+    name: Tests + coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
+      - run: uv python install 3.12
+      - run: uv sync --extra dev
+
+      - name: pytest with 100 percent coverage gate
+        run: uv run pytest
+
+  fuzz-budget:
+    name: Fuzz harnesses (60 s budget)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
+      - run: uv python install 3.12
+      - run: uv sync --extra dev
+
+      - name: Pub/Sub decoder fuzz (10 000 runs)
+        run: uv run python tests/fuzz/fuzz_pubsub_decoder.py -atheris_runs=10000
+
+      - name: Contract parser fuzz (10 000 runs)
+        run: uv run python tests/fuzz/fuzz_contract_parser.py -atheris_runs=10000
+
+  docs-build:
+    name: Sphinx warnings as errors
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
+      - run: uv python install 3.12
+      - run: uv sync --extra dev
+
+      - name: Build EN
+        run: uv run sphinx-build -W -b html docs docs/_build/html/en
+
+      - name: Build pt-BR
+        run: uv run sphinx-build -W -b html -D language=pt_BR docs docs/_build/html/pt_BR
