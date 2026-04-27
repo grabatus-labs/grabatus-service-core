@@ -39,6 +39,7 @@ from grabatus_service_core.errors import (
     WebhookAuthError,
     WebhookError,
 )
+from grabatus_service_core.settings import RuntimeMode, Settings
 
 __version__ = "0.1.0"
 
@@ -63,9 +64,11 @@ __all__ = [
     "OutputSpec",
     "OutputWriteError",
     "References",
+    "RuntimeMode",
     "SecretRef",
     "SecurityError",
     "ServiceDescriptor",
+    "Settings",
     "StorageError",
     "UnauthorizedUriError",
     "UnsupportedProtocolVersionError",

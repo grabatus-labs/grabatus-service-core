@@ -107,7 +107,7 @@ ignore_missing_imports = true
 # wrong values to confirm validation. None of this is production code.
 module = ["tests.*"]
 warn_unused_ignores = false
-disable_error_code = ["assignment", "comparison-overlap", "union-attr", "call-overload", "arg-type"]
+disable_error_code = ["assignment", "comparison-overlap", "union-attr", "call-overload", "arg-type", "call-arg"]
 # disallow_any_explicit is intentionally NOT enabled: Pydantic v2 BaseModel exposes
 # Any in inherited annotations (__pydantic_extra__, model_validate signatures).
 # The pydantic.mypy plugin would provide field-level Any safety, but is incompatible
