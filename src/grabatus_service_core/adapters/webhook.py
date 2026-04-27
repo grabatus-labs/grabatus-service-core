@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 import httpx
+from opentelemetry.propagate import inject as _otel_inject
 
 from grabatus_service_core.adapters.retry import with_retry
 from grabatus_service_core.errors import WebhookAuthError, WebhookError
@@ -57,6 +58,7 @@ class JwtWebhookNotifier:
             "Authorization": f"Bearer {token}",
             "Content-Type": "application/json",
         }
+        _otel_inject(headers)
         url = str(callback.url)
         try:
             response = self._client.post(
