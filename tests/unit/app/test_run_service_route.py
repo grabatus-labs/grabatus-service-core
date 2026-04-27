@@ -14,6 +14,9 @@ from pydantic import BaseModel
 from grabatus_service_core.adapters.message_pubsub import PubSubMessagePort
 from grabatus_service_core.app import build_app
 from grabatus_service_core.contract.base import BaseServiceContract
+from grabatus_service_core.contract.opaque import OpaqueParameters
+from grabatus_service_core.receiver.registry import ServiceRegistry
+from grabatus_service_core.receiver.runner import SharedReceiverAdapters, SharedReceiverRunner
 from grabatus_service_core.runner import RuntimeMode, ServiceRunner, build_runner
 from grabatus_service_core.security.scheme_allowlist import SchemeAllowlist
 from grabatus_service_core.testing import (
@@ -27,6 +30,7 @@ from grabatus_service_core.testing import (
     make_contract,
     make_fake_compute_backend,
 )
+from grabatus_service_core.testing.factories import make_service_descriptor
 
 
 class _Params(BaseModel):
@@ -119,3 +123,34 @@ def test_run_service_handles_non_json_body_with_error_payload(client: TestClient
     body = response.json()
     assert body["status"] == "error"
     assert body["error"]["error_code"] == "malformed_message"
+
+
+def test_run_service_with_shared_receiver_runner_includes_dispatched_job_id() -> None:
+    """SharedReceiverRunner result includes dispatched_job_id in the response."""
+    runner = SharedReceiverRunner(
+        adapters=SharedReceiverAdapters(
+            message=PubSubMessagePort(),
+            authorizer=AllowAllPolicy(),
+            job_dispatcher=InMemoryJobDispatcher(),
+            observability=NullObservability(),
+            clock=FrozenClock("2026-04-27T12:00:00Z"),
+        ),
+        scheme_allowlist=SchemeAllowlist(allowed={"gs", "bigquery", "secret"}),
+        registry=ServiceRegistry(by_name={"forecast": "grabatus-forecasting-worker"}),
+    )
+    app = build_app(runner=runner, observability=NullObservability())
+    client = TestClient(app)
+
+    contract = make_contract(
+        parameters=OpaqueParameters.model_validate({"x": 1}),
+        service=make_service_descriptor(name="forecast"),
+    )
+    inner_json = json.dumps(contract.model_dump(mode="json")).encode("utf-8")
+    wrapper = {"message": {"data": base64.b64encode(inner_json).decode("ascii")}}
+    response = client.post("/run_service", json=wrapper)
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "ok"
+    assert "dispatched_job_id" in body
+    assert body["dispatched_job_id"] is not None

@@ -9,12 +9,13 @@ target Cloud Run Job via a ``ServiceRegistry``.
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Literal
 from uuid import UUID
 
 from grabatus_service_core.contract.opaque import OpaqueServiceContract
 from grabatus_service_core.errors import GrabatusServiceError
+from grabatus_service_core.runner.runner import RuntimeMode
 from grabatus_service_core.runner.steps import authorize, decode, validate
 
 if TYPE_CHECKING:
@@ -59,6 +60,7 @@ class SharedReceiverRunner:
     adapters: SharedReceiverAdapters
     scheme_allowlist: SchemeAllowlist
     registry: ServiceRegistry
+    mode: RuntimeMode = field(default=RuntimeMode.SHARED_RECEIVER)
 
     def execute(self, raw: RawMessage) -> ReceiverExecutionResult:
         """Decode, validate, authorize, resolve target worker, dispatch."""

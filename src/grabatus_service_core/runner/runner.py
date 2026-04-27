@@ -59,6 +59,7 @@ class RuntimeMode(StrEnum):
     RECEIVER = "receiver"
     WORKER = "worker"
     MONOLITH = "monolith"
+    SHARED_RECEIVER = "shared-receiver"
 
 
 @dataclass(frozen=True)

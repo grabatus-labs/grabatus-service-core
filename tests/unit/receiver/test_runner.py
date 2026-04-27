@@ -189,3 +189,8 @@ def test_execute_returns_unauthorized_uri_error_when_authorizer_rejects() -> Non
     assert result.status == "error"
     assert isinstance(result.error, UnauthorizedUriError)
     assert result.dispatched_job_id is None
+
+
+def test_shared_receiver_runner_has_shared_receiver_mode() -> None:
+    runner = _build_runner_with_registry(ServiceRegistry(by_name={"forecast": "fc"}))
+    assert runner.mode.value == "shared-receiver"

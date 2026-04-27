@@ -86,3 +86,40 @@ def test_build_app_responds_to_health_ready() -> None:
     body = response.json()
     assert body["status"] == "ready"
     assert body["mode"] == RuntimeMode.MONOLITH.value
+
+
+def test_build_app_accepts_a_minimal_runner_like() -> None:
+    """A minimal runner (only `execute` and `mode`) is enough for build_app."""
+
+    class _Mode:
+        value = "minimal"
+
+    class _MinimalRunner:
+        mode = _Mode()
+
+        def execute(self, raw):
+            raise NotImplementedError("not exercised by build_app")
+
+    app = build_app(runner=_MinimalRunner(), observability=NullObservability())
+    assert app.title == "grabatus-service-core"
+
+
+def test_build_app_health_ready_reports_minimal_runner_mode() -> None:
+    class _Mode:
+        value = "shared-receiver"
+
+    class _MinimalRunner:
+        mode = _Mode()
+
+        def execute(self, raw):
+            raise NotImplementedError
+
+    app = build_app(runner=_MinimalRunner(), observability=NullObservability())
+    client = TestClient(app)
+
+    response = client.get("/health/ready")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "ready"
+    assert body["mode"] == "shared-receiver"
