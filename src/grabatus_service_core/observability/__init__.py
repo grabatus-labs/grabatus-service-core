@@ -1,5 +1,6 @@
 """Observability primitives: structlog config, OTel setup, metric catalog."""
 
+from grabatus_service_core.observability import metrics
 from grabatus_service_core.observability.logging import configure_structlog
 from grabatus_service_core.observability.otel_setup import (
     OpenTelemetryHandle,
@@ -9,5 +10,6 @@ from grabatus_service_core.observability.otel_setup import (
 __all__ = [
     "OpenTelemetryHandle",
     "configure_structlog",
+    "metrics",
     "setup_opentelemetry",
 ]
