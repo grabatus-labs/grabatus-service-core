@@ -93,6 +93,8 @@ module = [
     "google.cloud.*",
     "google.api_core.*",
     "google.auth.*",
+    "opentelemetry.exporter.cloud_trace",
+    "opentelemetry.exporter.cloud_monitoring",
 ]
 ignore_missing_imports = true
 
