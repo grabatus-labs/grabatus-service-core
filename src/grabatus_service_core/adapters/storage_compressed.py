@@ -57,7 +57,7 @@ class CompressedStorage:
                 raise InputReadError(
                     f"failed to zstd-decompress payload from uri={spec.source_uri!s}: {exc}",
                 ) from exc
-        raise InputReadError(  # pragma: no cover — unreachable; Pydantic narrows the type
+        raise InputReadError(  # pragma: no cover  # unreachable; Pydantic narrows the type
             f"unknown compression={spec.compression!r}",
         )
 
@@ -75,7 +75,7 @@ class CompressedStorage:
         elif spec.compression == "zstd":
             transformed = zstd.ZstdCompressor(level=_ZSTD_LEVEL).compress(payload)
         else:
-            raise OutputWriteError(  # pragma: no cover — unreachable; Pydantic narrows the type
+            raise OutputWriteError(  # pragma: no cover  # unreachable; Pydantic narrows the type
                 f"unknown compression={spec.compression!r}",
             )
         return self._inner.write(
