@@ -72,6 +72,27 @@ def test_otel_observability_records_metric_via_counter(
     assert "grabatus.requests.total" in metric_names
 
 
+def test_otel_observability_records_histogram_for_duration_metric(
+    otel_observability: tuple[
+        OpenTelemetryObservability, InMemorySpanExporter, InMemoryMetricReader
+    ],
+) -> None:
+    obs, _, metric_reader = otel_observability
+
+    obs.metric("grabatus.compute.duration", 1.5, step="run_compute")
+    obs.metric("grabatus.compute.duration", 2.1, step="run_compute")
+
+    data = metric_reader.get_metrics_data()
+    assert data is not None
+    metric_names = [
+        metric.name
+        for resource_metrics in data.resource_metrics
+        for scope_metrics in resource_metrics.scope_metrics
+        for metric in scope_metrics.metrics
+    ]
+    assert "grabatus.compute.duration" in metric_names
+
+
 def test_otel_observability_log_emits_event_via_span_event() -> None:
     span_exporter = InMemorySpanExporter()
     tp = TracerProvider()
