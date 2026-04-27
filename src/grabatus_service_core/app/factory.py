@@ -6,6 +6,8 @@ from typing import TYPE_CHECKING
 
 from fastapi import FastAPI
 
+from grabatus_service_core.app.routes import make_router
+
 if TYPE_CHECKING:
     from grabatus_service_core.contract.base import ParamsT
     from grabatus_service_core.ports.observability import ObservabilityPort
@@ -21,9 +23,5 @@ def build_app(
     app = FastAPI(title="grabatus-service-core", version="0.1.0")
     app.state.runner = runner
     app.state.observability = observability
-
-    @app.get("/health/live")
-    def _health_live() -> dict[str, str]:
-        return {"status": "ok"}
-
+    app.include_router(make_router())
     return app
