@@ -24,6 +24,7 @@ coverage.
    tutorials/building_a_new_service
    tutorials/extending_a_port
    tutorials/running_tests
+   tutorials/deploying_the_shared_receiver
 
 .. toctree::
    :maxdepth: 2

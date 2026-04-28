@@ -89,3 +89,45 @@ Test layers
 ``tests/contract_compatibility``
     JSON Schema snapshot of ``BaseServiceContract`` plus parametrised
     valid/invalid fixture sweeps.
+
+Shared Receiver
+---------------
+
+A single Cloud Run Service receives Pub/Sub push messages for every
+Grabatus computational service. It validates the envelope, authorizes
+the URIs, looks up the right Cloud Run Job to handle the request, and
+dispatches the work. The receiver itself never touches storage or
+secrets.
+
+Why one shared receiver instead of one per service?
+
+* Adding a new service is one new worker plus one entry in the
+  ``GBT_SERVICE_REGISTRY`` env var. No new receiver to deploy.
+* The receiver has no business logic — it is pure infrastructure that
+  validates the envelope schema (which is shared across services).
+* One warm instance ($5–10/month) replaces N warm instances.
+
+How the receiver decides which worker to invoke::
+
+   envelope.service.name = "forecast"
+                │
+                ▼
+   ServiceRegistry.resolve("forecast") → "grabatus-forecasting-worker"
+                │
+                ▼
+   CloudRunJobsDispatcher.dispatch(
+       job_name="grabatus-forecasting-worker",
+       payload=<full validated contract bytes>,
+       request_id=<envelope.request_id>,
+   )
+
+The registry is loaded once from ``GBT_SERVICE_REGISTRY`` at process
+start. Adding a new service is one env-var update + restart::
+
+   GBT_SERVICE_REGISTRY=forecast:grabatus-forecasting-worker,abtest:grabatus-abtest-worker
+
+The receiver uses :class:`OpaqueServiceContract` (rather than a
+service-specific contract type) because at envelope-decode time it
+does not know which service the request is for. Parameters are
+validated only by the worker, which uses its own typed Pydantic
+``Parameters`` model.

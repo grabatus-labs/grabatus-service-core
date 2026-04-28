@@ -21,6 +21,7 @@ class RunnerLike(Protocol):
 
     Both ``ServiceRunner[ParamsT]`` and ``SharedReceiverRunner`` satisfy
     this Protocol. The runner must expose:
+
     - ``execute(raw: RawMessage) -> object`` returning a result with at
       least ``status``, ``request_id``, and ``error`` attributes.
     - ``mode`` exposing a ``.value: str`` (used by ``/health/ready``).
