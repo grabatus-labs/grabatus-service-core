@@ -1,0 +1,26 @@
+# syntax=docker/dockerfile:1.7
+# Multi-stage build for the shared receiver Cloud Run Service.
+# Image: grabatus-service-core:vX.Y.Z
+
+FROM python:3.12-slim AS builder
+ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_NO_CACHE_DIR=1 \
+    UV_LINK_MODE=copy
+WORKDIR /build
+RUN pip install uv
+COPY pyproject.toml uv.lock README.md ./
+COPY src/ ./src/
+RUN uv build --wheel --out-dir /tmp/wheels
+
+FROM python:3.12-slim AS runtime
+ENV PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PYTHONUNBUFFERED=1
+RUN useradd --create-home --uid 1000 grabatus
+USER grabatus
+WORKDIR /home/grabatus
+COPY --from=builder --chown=grabatus:grabatus /tmp/wheels/ /tmp/wheels/
+RUN pip install --user /tmp/wheels/*.whl && rm -rf /tmp/wheels
+ENV PATH="/home/grabatus/.local/bin:${PATH}"
+EXPOSE 8080
+CMD ["grabatus-receiver"]
