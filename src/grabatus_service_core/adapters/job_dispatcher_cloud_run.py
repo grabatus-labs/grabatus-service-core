@@ -30,6 +30,10 @@ _RETRIABLE_CLOUD_RUN_ERRORS: tuple[type[BaseException], ...] = (
 class CloudRunJobsDispatcher:
     """Dispatch worker runs by triggering a Cloud Run Job execution.
 
+    The Cloud Run Jobs API client is constructed lazily on first
+    ``dispatch()`` so the receiver process can start in environments without GCP
+    credentials (e.g. local Docker smoke tests, CI builds).
+
     The job binary expects two env-var overrides on each invocation:
     ``GBT_JOB_PAYLOAD`` (the contract bytes, base64-decoded by the worker)
     and ``GBT_JOB_REQUEST_ID`` (for log correlation).
@@ -44,7 +48,12 @@ class CloudRunJobsDispatcher:
     ) -> None:
         self._project_id = project_id
         self._region = region
-        self._client = client or run_v2.JobsClient()
+        self._client: run_v2.JobsClient | None = client  # ready if injected
+
+    def _get_client(self) -> run_v2.JobsClient:
+        if self._client is None:
+            self._client = run_v2.JobsClient()
+        return self._client
 
     @with_retry(retry_on=_RETRIABLE_CLOUD_RUN_ERRORS)
     def dispatch(
@@ -73,7 +82,7 @@ class CloudRunJobsDispatcher:
         )
         request = run_v2.RunJobRequest(name=full_job_name, overrides=overrides)
         try:
-            operation = self._client.run_job(request=request)
+            operation = self._get_client().run_job(request=request)
         except _RETRIABLE_CLOUD_RUN_ERRORS:
             raise
         except gcp_exceptions.GoogleAPIError as exc:

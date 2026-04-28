@@ -73,3 +73,38 @@ def test_cloud_run_dispatcher_retries_on_transient_error() -> None:
 
     assert job.job_id == "ok"
     assert client.run_job.call_count == 2
+
+
+def test_dispatcher_does_not_create_client_until_first_dispatch(monkeypatch) -> None:
+    """Constructing the dispatcher must not require GCP credentials.
+
+    Regression: the previous eager construction in __init__ raised
+    DefaultCredentialsError on the receiver container when no creds
+    were attached.
+    """
+    creation_count = {"n": 0}
+
+    class _FakeClient:
+        def __init__(self) -> None:
+            creation_count["n"] += 1
+
+        def run_job(self, *, request) -> object:
+            md_cls = type("_Md", (), {"name": "exec/x"})
+            op_cls = type("_Op", (), {"metadata": md_cls()})
+            return op_cls()
+
+    monkeypatch.setattr(
+        "grabatus_service_core.adapters.job_dispatcher_cloud_run.run_v2.JobsClient",
+        _FakeClient,
+    )
+
+    dispatcher = CloudRunJobsDispatcher(project_id="grabatus", region="us-east1")
+    assert creation_count["n"] == 0  # NOT created yet
+
+    # Calling dispatch triggers lazy construction exactly once.
+    dispatcher.dispatch(job_name="forecast-worker", payload=b'{"x":1}', request_id=_RID)
+    assert creation_count["n"] == 1
+
+    # A second dispatch reuses the cached client — no new construction.
+    dispatcher.dispatch(job_name="forecast-worker", payload=b'{"x":2}', request_id=_RID)
+    assert creation_count["n"] == 1
