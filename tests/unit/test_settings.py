@@ -126,3 +126,31 @@ def test_settings_accepts_already_constructed_service_registry(
 
     settings = Settings(service_registry=ServiceRegistry(by_name={"x": "y"}))
     assert settings.service_registry.resolve("x") == "y"
+
+
+def test_settings_reads_gcp_project_and_region(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("GBT_RUNTIME_MODE", "shared-receiver")
+    monkeypatch.setenv("GBT_ENV", "local")
+    monkeypatch.setenv("SERVICE_SECRET_KEY", "test")
+    monkeypatch.setenv("GBT_GCP_PROJECT", "grabatus")
+    monkeypatch.setenv("GBT_GCP_REGION", "us-east1")
+    monkeypatch.setenv("GBT_BUCKET_PREFIX", "gbt-storage")
+
+    settings = Settings()
+
+    assert settings.gcp_project == "grabatus"
+    assert settings.gcp_region == "us-east1"
+    assert settings.bucket_prefix == "gbt-storage"
+
+
+def test_settings_default_gcp_project_is_none(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("GBT_RUNTIME_MODE", "monolith")
+    monkeypatch.setenv("GBT_ENV", "local")
+    monkeypatch.setenv("SERVICE_SECRET_KEY", "test")
+    monkeypatch.delenv("GBT_GCP_PROJECT", raising=False)
+
+    settings = Settings()
+
+    assert settings.gcp_project is None
+    assert settings.gcp_region == "us-east1"  # default
+    assert settings.bucket_prefix == "gbt-storage"  # default

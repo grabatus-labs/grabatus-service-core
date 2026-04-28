@@ -25,6 +25,9 @@ dependencies = [
     "zstandard>=0.22",
 ]
 
+[project.scripts]
+grabatus-receiver = "grabatus_service_core.receiver.cli:main"
+
 [project.optional-dependencies]
 dev = [
     "pytest>=8.3",
@@ -99,6 +102,7 @@ module = [
     "opentelemetry.exporter.cloud_monitoring",
     "atheris",
     "zstandard",
+    "uvicorn",
 ]
 ignore_missing_imports = true
 

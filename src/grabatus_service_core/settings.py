@@ -54,6 +54,9 @@ class Settings(BaseSettings):
     trace_sample_rate: float = Field(default=1.0, ge=0.0, le=1.0)
     worker_job_name: str | None = Field(default=None)
     service_secret_key: Annotated[SecretStr, Field(alias="SERVICE_SECRET_KEY")]
+    gcp_project: str | None = Field(default=None)
+    gcp_region: str = Field(default="us-east1")
+    bucket_prefix: str = Field(default="gbt-storage")
 
     @field_validator("allowed_schemes", "allowed_hosts", mode="before")
     @classmethod
