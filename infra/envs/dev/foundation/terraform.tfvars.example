@@ -1,0 +1,6 @@
+# Copy to terraform.tfvars and fill in real values. Never commit
+# terraform.tfvars itself — .gitignore excludes it.
+
+gcp_project = "grabatus-dev"
+gcp_region  = "us-east1"
+environment = "dev"
