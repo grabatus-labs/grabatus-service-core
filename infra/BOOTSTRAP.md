@@ -94,6 +94,54 @@ env. If you genuinely need to recreate one (e.g., to migrate to a
 different region), restore from a versioned `tfstate` backup before
 flipping the bucket name in `backend.tf`.
 
+## Cross-repo apply order
+
+After the state buckets exist, the foundation (this repo) and the
+forecasting worker stack (the forecasting repo) reference each
+other via `terraform_remote_state`. Apply them in this order
+**the very first time** an env is set up:
+
+1. **Foundation, bootstrap mode** — set
+   `read_forecasting_worker_state = false` so the foundation does
+   not try to read a worker state file that doesn't exist yet.
+   With the deploy workflow, run with that input toggled to
+   `false`. Locally:
+
+   ```bash
+   cd infra/envs/${ENV}/foundation
+   terraform apply -var='read_forecasting_worker_state=false'
+   ```
+
+2. **Worker stack** (forecasting repo) — applies normally; reads
+   foundation outputs (`receiver_url`, registry URL, deploy SA
+   email) and publishes `pubsub_invoker_email` as an output.
+
+3. **Foundation, steady state** — re-apply with the variable at
+   its default (`true`). The foundation now reads
+   `pubsub_invoker_email` from the worker state and grants the
+   receiver's `run.invoker` to it.
+
+Every subsequent apply uses the steady-state defaults; the
+bootstrap toggle is only ever needed once per env.
+
+## GitHub Environment configuration
+
+The `Deploy Infra` workflows (`.github/workflows/deploy-infra.yml`
+in both repos) authenticate to GCP through Workload Identity
+Federation. Each GitHub Environment (`dev`, `staging`,
+`production`) needs the following **environment variables** set
+on both repos:
+
+| Variable | Value (example for `dev`) | Notes |
+|---|---|---|
+| `GCP_PROJECT` | `grabatus-dev` | The target GCP project ID. |
+| `WIF_PROVIDER` | `projects/<num>/locations/global/workloadIdentityPools/github-actions-pool/providers/github-oidc` | Output of the WIF module after the foundation applies; copy from the deploy run's logs or `terraform output`. |
+| `DEPLOY_SA_EMAIL` | `gbt-dev-deploy-service-core@grabatus-dev.iam.gserviceaccount.com` (lib) / `gbt-dev-deploy-forecasting@grabatus-dev.iam.gserviceaccount.com` (forecasting) | The deploy SA the workflow impersonates. |
+
+The Environment should also have **required reviewers** for
+`production` (and ideally `staging`) so an `apply` blocks until a
+human approves it.
+
 ## Related
 
 * The forecasting repo has a sibling document at

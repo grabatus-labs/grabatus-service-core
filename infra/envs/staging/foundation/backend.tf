@@ -4,6 +4,6 @@
 terraform {
   backend "gcs" {
     bucket = "gbt-tfstate-staging"
-    prefix = "foundation"
+    prefix = "gbt-staging-service-core/foundation"
   }
 }

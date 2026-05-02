@@ -4,6 +4,6 @@
 terraform {
   backend "gcs" {
     bucket = "gbt-tfstate-production"
-    prefix = "foundation"
+    prefix = "gbt-production-service-core/foundation"
   }
 }
