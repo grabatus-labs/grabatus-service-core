@@ -10,9 +10,40 @@
 #   3. The shared receiver runs the lib's receiver image.
 #   4. Common alerts watch the receiver and security incidents.
 
+# Forecasting worker stack remote state (optional).
+#
+# The worker stack outputs pubsub_invoker_email — the SA that
+# Pub/Sub uses to OIDC-sign push requests to the receiver. The
+# foundation grants run.invoker on the receiver to that email.
+# On the very first apply (worker stack never applied), set
+# read_forecasting_worker_state = false; flip to true after.
+data "terraform_remote_state" "forecasting_worker" {
+  count = var.read_forecasting_worker_state ? 1 : 0
+
+  backend = "gcs"
+
+  config = {
+    bucket = var.forecasting_worker_state_bucket
+    prefix = var.forecasting_worker_state_prefix
+  }
+
+  defaults = {
+    pubsub_invoker_email = null
+  }
+}
+
 locals {
   prefix     = "gbt-${var.environment}"
   github_org = "rodolphomacedo"
+
+  pubsub_invoker_email = (
+    var.pubsub_invoker_email_override != null
+    ? var.pubsub_invoker_email_override
+    : (var.read_forecasting_worker_state
+      ? try(data.terraform_remote_state.forecasting_worker[0].outputs.pubsub_invoker_email, null)
+      : null
+    )
+  )
 }
 
 module "wif" {
@@ -94,10 +125,11 @@ module "shared_receiver" {
     }
   }
 
-  # Wired in CP14 from the forecasting repo via remote state. For now
-  # left null so the foundation stack can apply standalone before the
-  # forecasting stack ever runs.
-  pubsub_invoker_email = null
+  # Sourced from the forecasting worker stack via remote state
+  # (see local.pubsub_invoker_email above). On the bootstrap
+  # apply this is null and the receiver applies without the
+  # run.invoker binding; the second apply picks it up.
+  pubsub_invoker_email = local.pubsub_invoker_email
 }
 
 module "alerts" {

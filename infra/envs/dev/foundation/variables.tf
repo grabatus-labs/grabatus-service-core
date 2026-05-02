@@ -47,3 +47,45 @@ variable "notification_channels" {
   type        = list(string)
   default     = []
 }
+
+variable "read_forecasting_worker_state" {
+  description = <<-EOT
+    Whether to read the forecasting worker stack's remote state
+    to discover pubsub_invoker_email. Set to false on the very
+    first foundation apply (when the worker stack has never been
+    applied yet); flip to true on every subsequent apply so the
+    receiver's run.invoker IAM stays in sync. See BOOTSTRAP.md.
+  EOT
+  type        = bool
+  default     = true
+}
+
+variable "forecasting_worker_state_bucket" {
+  description = <<-EOT
+    GCS bucket holding the forecasting worker stack's remote
+    state. Defaults to the shared "gbt-tfstate-{env}" bucket.
+  EOT
+  type        = string
+  default     = "gbt-tfstate-dev"
+}
+
+variable "forecasting_worker_state_prefix" {
+  description = <<-EOT
+    Prefix inside forecasting_worker_state_bucket where the
+    forecasting worker stack stores its tfstate. Convention:
+    gbt-{env}-forecasting/worker.
+  EOT
+  type        = string
+  default     = "gbt-dev-forecasting/worker"
+}
+
+variable "pubsub_invoker_email_override" {
+  description = <<-EOT
+    Manual override for pubsub_invoker_email. When non-null,
+    takes priority over the remote-state-derived value. Useful
+    for break-glass scenarios where the worker stack is
+    temporarily unavailable.
+  EOT
+  type        = string
+  default     = null
+}
