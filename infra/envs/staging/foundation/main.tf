@@ -1,4 +1,4 @@
-# Root module for the dev environment's foundation stack.
+# Root module for the staging environment's foundation stack.
 #
 # Wires the WIF, Artifact Registry, shared receiver, and common
 # alerts modules. Per-env values land in terraform.tfvars; the
