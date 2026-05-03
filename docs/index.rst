@@ -33,6 +33,7 @@ coverage.
    architecture
    security
    observability
+   infrastructure
 
 .. toctree::
    :maxdepth: 2
