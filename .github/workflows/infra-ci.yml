@@ -84,10 +84,11 @@ jobs:
       - name: tflint (modules + envs)
         run: |
           set -euo pipefail
-          # Lint each module
+          # Lint each module. tflint does not allow combining
+          # --chdir and --recursive, so we iterate explicitly.
           for d in infra/modules/*/; do
             echo "::group::tflint $d"
-            tflint --chdir="$d" --recursive --no-color
+            tflint --chdir="$d" --no-color
             echo "::endgroup::"
           done
           # Lint each env root stack

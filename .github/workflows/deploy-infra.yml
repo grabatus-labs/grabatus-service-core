@@ -20,10 +20,10 @@ on:
           - plan
           - apply
       read_forecasting_worker_state:
-        description: "Read forecasting worker remote state (set to false on first bootstrap apply)"
+        description: "Read forecasting worker remote state (leave false on first bootstrap apply, flip to true after the worker stack has been applied at least once)"
         type: boolean
         required: false
-        default: true
+        default: false
 
 concurrency:
   group: deploy-infra-foundation-${{ inputs.env }}
