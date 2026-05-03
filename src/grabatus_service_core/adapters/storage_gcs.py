@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import google.cloud.storage as gcs
 from google.api_core import exceptions as gcp_exceptions
-from google.cloud import storage as gcs
 
 from grabatus_service_core.adapters.retry import with_retry
 from grabatus_service_core.errors import (

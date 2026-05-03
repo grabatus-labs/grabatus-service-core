@@ -1,6 +1,7 @@
 """Verify OpaqueServiceContract validates envelope/I-O but not parameters shape."""
 
 import json
+from typing import Any
 
 import pytest
 from pydantic import ValidationError
@@ -20,7 +21,7 @@ from grabatus_service_core.testing.factories import (
 )
 
 
-def _build_payload(parameters: dict) -> dict:
+def _build_payload(parameters: dict[str, Any]) -> dict[str, Any]:
     return {
         "envelope": json.loads(make_envelope().model_dump_json()),
         "identity": json.loads(make_identity().model_dump_json()),

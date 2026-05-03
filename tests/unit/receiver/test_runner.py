@@ -2,6 +2,7 @@
 
 import json
 from base64 import b64encode
+from typing import Any
 from uuid import UUID, uuid4
 
 import pytest
@@ -60,7 +61,7 @@ def test_receiver_execution_result_is_frozen() -> None:
         result.status = "error"  # type: ignore[misc]
 
 
-def _build_opaque_contract(parameters: dict, service_name: str) -> OpaqueServiceContract:
+def _build_opaque_contract(parameters: dict[str, Any], service_name: str) -> OpaqueServiceContract:
     """Build an OpaqueServiceContract via the existing make_contract factory."""
     return make_contract(
         parameters=OpaqueParameters.model_validate(parameters),

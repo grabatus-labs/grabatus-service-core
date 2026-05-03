@@ -14,7 +14,7 @@ Example:
 from __future__ import annotations
 
 import gzip
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING
 
 import zstandard as zstd
 
@@ -52,7 +52,7 @@ class CompressedStorage:
                 ) from exc
         if spec.compression == "zstd":
             try:
-                return cast("bytes", zstd.ZstdDecompressor().decompress(raw))
+                return zstd.ZstdDecompressor().decompress(raw)
             except zstd.ZstdError as exc:
                 raise InputReadError(
                     f"failed to zstd-decompress payload from uri={spec.source_uri!s}: {exc}",

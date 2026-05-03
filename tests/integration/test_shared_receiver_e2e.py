@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 from base64 import b64encode
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import pytest
 from fastapi.testclient import TestClient
@@ -50,7 +50,7 @@ def app(monkeypatch: pytest.MonkeyPatch) -> FastAPI:
     )
 
 
-def _build_pubsub_payload(contract: BaseServiceContract[OpaqueParameters]) -> dict:
+def _build_pubsub_payload(contract: BaseServiceContract[OpaqueParameters]) -> dict[str, Any]:
     return {
         "message": {
             "data": b64encode(
