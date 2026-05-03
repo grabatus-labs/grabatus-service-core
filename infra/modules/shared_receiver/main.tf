@@ -93,17 +93,5 @@ resource "google_cloud_run_v2_service" "this" {
   }
 }
 
-# Allow the Pub/Sub OIDC invoker SA (created in the worker repo)
-# to call the receiver. Conditional: when pubsub_invoker_email is
-# null the foundation can apply standalone before the worker stack
-# exists. Once the worker outputs its email via remote state, a
-# re-apply grants the invoker.
-resource "google_cloud_run_v2_service_iam_member" "pubsub_invoker" {
-  count = var.pubsub_invoker_email == null ? 0 : 1
-
-  project  = var.project
-  location = google_cloud_run_v2_service.this.location
-  name     = google_cloud_run_v2_service.this.name
-  role     = "roles/run.invoker"
-  member   = "serviceAccount:${var.pubsub_invoker_email}"
-}
+# The run.invoker grant for the Pub/Sub OIDC invoker SA lives in
+# iam.tf as google_cloud_run_v2_service_iam_member.pubsub_invokes_receiver.

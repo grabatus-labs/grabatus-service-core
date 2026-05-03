@@ -59,15 +59,20 @@ resource "google_service_account" "ci" {
   description  = "CI/CD service account for ${each.value.repository}"
 }
 
-# IAM binding that allows the named repo (and optionally a single
-# GitHub Actions environment) to call iam.serviceAccounts.getAccessToken
-# on the SA via the federation pool.
+# IAM binding that allows the named repo to call
+# iam.serviceAccounts.getAccessToken on the SA via the federation pool.
+#
+# We always scope by attribute.repository, never only by
+# attribute.environment. attribute.environment without a repo qualifier
+# would let any repo in the same owner that defines a GitHub Environment
+# with a matching name impersonate this SA, which defeats the per-repo
+# blast radius guarantee. Production-grade SAs (github_environment set)
+# instead rely on GitHub Environment protection rules (required
+# reviewers, deployment branches) to gate token issuance to that env.
 locals {
   sa_principals = {
     for k, v in var.service_accounts :
-    k => v.github_environment == null
-    ? "principalSet://iam.googleapis.com/${google_iam_workload_identity_pool.this.name}/attribute.repository/${v.repository}"
-    : "principalSet://iam.googleapis.com/${google_iam_workload_identity_pool.this.name}/attribute.environment/${v.github_environment}"
+    k => "principalSet://iam.googleapis.com/${google_iam_workload_identity_pool.this.name}/attribute.repository/${v.repository}"
   }
 }
 
