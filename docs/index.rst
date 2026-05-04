@@ -31,6 +31,7 @@ coverage.
    :caption: Concepts
 
    architecture
+   integration_contract
    security
    observability
    infrastructure

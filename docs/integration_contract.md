@@ -57,7 +57,7 @@ receiver.
 
 ### Service contract
 
-```json
+```text
 {
   "envelope": {
     "protocol_version": "1.0",
