@@ -75,7 +75,9 @@ def test_cloud_run_dispatcher_retries_on_transient_error() -> None:
     assert client.run_job.call_count == 2
 
 
-def test_dispatcher_does_not_create_client_until_first_dispatch(monkeypatch) -> None:
+def test_dispatcher_does_not_create_client_until_first_dispatch(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """Constructing the dispatcher must not require GCP credentials.
 
     Regression: the previous eager construction in __init__ raised
@@ -88,7 +90,7 @@ def test_dispatcher_does_not_create_client_until_first_dispatch(monkeypatch) -> 
         def __init__(self) -> None:
             creation_count["n"] += 1
 
-        def run_job(self, *, request) -> object:
+        def run_job(self, *, request: object) -> object:
             md_cls = type("_Md", (), {"name": "exec/x"})
             op_cls = type("_Op", (), {"metadata": md_cls()})
             return op_cls()

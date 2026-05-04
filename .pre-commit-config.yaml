@@ -37,6 +37,7 @@ repos:
           - google-cloud-pubsub>=2.26
           - google-cloud-secret-manager>=2.20
           - google-cloud-run>=0.10
+          - zstandard>=0.22
         args: [--strict, --config-file=pyproject.toml]
         files: ^src/
 

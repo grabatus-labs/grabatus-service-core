@@ -1,0 +1,111 @@
+name: Infra CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "infra/**"
+      - ".tflint.hcl"
+      - ".github/workflows/infra-ci.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "infra/**"
+      - ".tflint.hcl"
+      - ".github/workflows/infra-ci.yml"
+
+concurrency:
+  group: infra-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  TF_VERSION: "1.7.5"
+  TFLINT_VERSION: "v0.50.3"
+
+jobs:
+  fmt:
+    name: terraform fmt
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+
+      - name: terraform fmt -check -recursive
+        run: terraform fmt -check -recursive infra/
+
+  validate:
+    name: terraform validate (${{ matrix.target }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - envs/dev/foundation
+          - envs/staging/foundation
+          - envs/production/foundation
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+
+      - name: terraform init (no backend)
+        working-directory: infra/${{ matrix.target }}
+        run: terraform init -backend=false -input=false
+
+      - name: terraform validate
+        working-directory: infra/${{ matrix.target }}
+        run: terraform validate -no-color
+
+  tflint:
+    name: tflint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: terraform-linters/setup-tflint@v4
+        with:
+          tflint_version: ${{ env.TFLINT_VERSION }}
+
+      - name: tflint --init
+        run: tflint --init
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: tflint (modules + envs)
+        run: |
+          set -euo pipefail
+          # Lint each module. tflint does not allow combining
+          # --chdir and --recursive, so we iterate explicitly.
+          for d in infra/modules/*/; do
+            echo "::group::tflint $d"
+            tflint --chdir="$d" --no-color
+            echo "::endgroup::"
+          done
+          # Lint each env root stack
+          for d in infra/envs/*/foundation/; do
+            echo "::group::tflint $d"
+            tflint --chdir="$d" --no-color
+            echo "::endgroup::"
+          done
+
+  tfsec:
+    name: tfsec
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aquasecurity/tfsec-action@v1.0.3
+        with:
+          working_directory: infra/
+          soft_fail: false
+          additional_args: --concise-output

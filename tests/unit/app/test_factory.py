@@ -97,7 +97,7 @@ def test_build_app_accepts_a_minimal_runner_like() -> None:
     class _MinimalRunner:
         mode = _Mode()
 
-        def execute(self, raw):
+        def execute(self, raw: object) -> object:
             raise NotImplementedError("not exercised by build_app")
 
     app = build_app(runner=_MinimalRunner(), observability=NullObservability())
@@ -111,7 +111,7 @@ def test_build_app_health_ready_reports_minimal_runner_mode() -> None:
     class _MinimalRunner:
         mode = _Mode()
 
-        def execute(self, raw):
+        def execute(self, raw: object) -> object:
             raise NotImplementedError
 
     app = build_app(runner=_MinimalRunner(), observability=NullObservability())

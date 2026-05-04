@@ -1,0 +1,78 @@
+name: Deploy Infra (foundation)
+
+on:
+  workflow_dispatch:
+    inputs:
+      env:
+        description: "Target environment"
+        type: choice
+        required: true
+        options:
+          - dev
+          - staging
+          - production
+      action:
+        description: "terraform action"
+        type: choice
+        required: true
+        default: plan
+        options:
+          - plan
+          - apply
+      read_forecasting_worker_state:
+        description: "Read forecasting worker remote state (leave false on first bootstrap apply, flip to true after the worker stack has been applied at least once)"
+        type: boolean
+        required: false
+        default: false
+
+concurrency:
+  group: deploy-infra-foundation-${{ inputs.env }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  TF_VERSION: "1.7.5"
+  TF_IN_AUTOMATION: "true"
+  TF_INPUT: "0"
+
+jobs:
+  terraform:
+    name: terraform ${{ inputs.action }} (${{ inputs.env }})
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.env }}
+
+    defaults:
+      run:
+        working-directory: infra/envs/${{ inputs.env }}/foundation
+
+    env:
+      TF_VAR_gcp_project: ${{ vars.GCP_PROJECT }}
+      TF_VAR_environment: ${{ inputs.env }}
+      TF_VAR_read_forecasting_worker_state: ${{ inputs.read_forecasting_worker_state }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.WIF_PROVIDER }}
+          service_account: ${{ vars.DEPLOY_SA_EMAIL }}
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+
+      - name: terraform init
+        run: terraform init -input=false
+
+      - name: terraform plan
+        run: terraform plan -input=false -no-color -out=tfplan
+
+      - name: terraform apply
+        if: inputs.action == 'apply'
+        run: terraform apply -input=false -no-color tfplan

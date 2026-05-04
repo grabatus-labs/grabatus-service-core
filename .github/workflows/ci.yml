@@ -58,7 +58,13 @@ jobs:
         run: uv run bandit -r src/ -ll
 
       - name: pip-audit
-        run: uv run pip-audit --strict
+        # Not --strict: grabatus-service-core itself is not on PyPI and would
+        # surface as an unaudited (self) dependency. Real CVEs in transitive
+        # deps still fail this step.
+        #
+        # Ignored: CVE-2026-3219 in pip 26.0.1 has no fix version released
+        # yet; revisit when a patched pip ships and remove the ignore.
+        run: uv run pip-audit --ignore-vuln CVE-2026-3219
 
       - name: detect-secrets
         run: uv run detect-secrets scan --baseline .secrets.baseline

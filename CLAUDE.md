@@ -63,6 +63,25 @@ Guidance for Claude Code agents working in this repository.
 - Reference issue numbers when relevant.
 - Never amend commits unless explicitly asked.
 
+## Protocol contract
+
+`docs/integration_contract.md` is the **canonical specification** of the
+protocol — the source of truth for every consumer of this library,
+including the `grabatus` platform. It must stay byte-for-byte consistent
+with the Pydantic models in `src/grabatus_service_core/contract/`.
+
+Rules:
+- Any change to a model in `contract/` must update `integration_contract.md`
+  **in the same commit**. Fields added, renamed, or removed; constraints
+  changed; new optional sections added — all of them.
+- Any new error code added to `errors/` must appear in the taxonomy table
+  in §3, with its stage, code string, and a one-line meaning.
+- Any change to versioning policy (§4) must be reflected in the document.
+- The `grabatus` platform regenerates its integration code from this document.
+  A stale document means the platform ships broken integration code.
+- When in doubt: the Pydantic models are ground truth; the document is the
+  human-readable projection of those models.
+
 ## Defensive requirements
 
 - All external HTTP calls: timeout 30s, retry 3x with exponential backoff via `tenacity`.
