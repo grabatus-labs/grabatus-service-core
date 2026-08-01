@@ -1,0 +1,1305 @@
+{
+  "$defs": {
+    "ArtifactDescription": {
+      "additionalProperties": false,
+      "description": "One numeric artefact the service wrote, and its field dictionary.",
+      "properties": {
+        "description": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "Description",
+          "type": "string"
+        },
+        "fields": {
+          "items": {
+            "$ref": "#/$defs/FieldDescription"
+          },
+          "maxItems": 100,
+          "minItems": 1,
+          "title": "Fields",
+          "type": "array"
+        },
+        "format": {
+          "enum": [
+            "xlsx",
+            "csv",
+            "json",
+            "parquet",
+            "bigquery",
+            "inline"
+          ],
+          "title": "Format",
+          "type": "string"
+        },
+        "role": {
+          "maxLength": 32,
+          "minLength": 1,
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "title": "Role",
+          "type": "string"
+        },
+        "uri": {
+          "format": "uri",
+          "minLength": 1,
+          "title": "Uri",
+          "type": "string"
+        }
+      },
+      "required": [
+        "role",
+        "uri",
+        "format",
+        "description",
+        "fields"
+      ],
+      "title": "ArtifactDescription",
+      "type": "object"
+    },
+    "Assumption": {
+      "additionalProperties": false,
+      "description": "A stated assumption, with the cost of it being wrong.",
+      "properties": {
+        "checked": {
+          "title": "Checked",
+          "type": "boolean"
+        },
+        "statement": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "Statement",
+          "type": "string"
+        },
+        "violation_impact": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "Violation Impact",
+          "type": "string"
+        }
+      },
+      "required": [
+        "statement",
+        "violation_impact",
+        "checked"
+      ],
+      "title": "Assumption",
+      "type": "object"
+    },
+    "Caveat": {
+      "additionalProperties": false,
+      "description": "A limitation stated together with what not to conclude from it.\n\n``do_not_conclude`` is mandatory: a caveat without it is a disclaimer\nthat changes nobody's reading.",
+      "properties": {
+        "do_not_conclude": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "Do Not Conclude",
+          "type": "string"
+        },
+        "severity": {
+          "enum": [
+            "high",
+            "medium",
+            "low"
+          ],
+          "title": "Severity",
+          "type": "string"
+        },
+        "statement": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "Statement",
+          "type": "string"
+        }
+      },
+      "required": [
+        "severity",
+        "statement",
+        "do_not_conclude"
+      ],
+      "title": "Caveat",
+      "type": "object"
+    },
+    "ComparisonBaseline": {
+      "additionalProperties": false,
+      "description": "What the finding is being compared against.",
+      "properties": {
+        "label": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Label",
+          "type": "string"
+        },
+        "value": {
+          "title": "Value",
+          "type": "number"
+        }
+      },
+      "required": [
+        "label",
+        "value"
+      ],
+      "title": "ComparisonBaseline",
+      "type": "object"
+    },
+    "DataProvenance": {
+      "additionalProperties": false,
+      "description": "Shape and quality of the data behind the result.",
+      "properties": {
+        "entities": {
+          "items": {
+            "$ref": "#/$defs/EntitySummary"
+          },
+          "maxItems": 30,
+          "minItems": 1,
+          "title": "Entities",
+          "type": "array"
+        },
+        "filters_applied": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 30,
+          "title": "Filters Applied",
+          "type": "array"
+        },
+        "granularity": {
+          "maxLength": 64,
+          "minLength": 1,
+          "title": "Granularity",
+          "type": "string"
+        },
+        "known_gaps": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 30,
+          "title": "Known Gaps",
+          "type": "array"
+        },
+        "observation_count": {
+          "exclusiveMinimum": 0,
+          "title": "Observation Count",
+          "type": "integer"
+        },
+        "period_covered": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PeriodCovered"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "quality_flags": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 30,
+          "title": "Quality Flags",
+          "type": "array"
+        }
+      },
+      "required": [
+        "observation_count",
+        "granularity",
+        "entities"
+      ],
+      "title": "DataProvenance",
+      "type": "object"
+    },
+    "Diagnostic": {
+      "additionalProperties": false,
+      "description": "One quality check, already judged against its threshold.",
+      "properties": {
+        "meaning": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "Meaning",
+          "type": "string"
+        },
+        "name": {
+          "maxLength": 120,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "pass",
+            "warn",
+            "fail"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "threshold": {
+          "maxLength": 64,
+          "minLength": 1,
+          "title": "Threshold",
+          "type": "string"
+        },
+        "value": {
+          "title": "Value",
+          "type": "number"
+        }
+      },
+      "required": [
+        "name",
+        "value",
+        "threshold",
+        "status",
+        "meaning"
+      ],
+      "title": "Diagnostic",
+      "type": "object"
+    },
+    "EntitySummary": {
+      "additionalProperties": false,
+      "description": "How many distinct things of a given kind were analysed.",
+      "properties": {
+        "count": {
+          "minimum": 0,
+          "title": "Count",
+          "type": "integer"
+        },
+        "label": {
+          "maxLength": 64,
+          "minLength": 1,
+          "title": "Label",
+          "type": "string"
+        }
+      },
+      "required": [
+        "label",
+        "count"
+      ],
+      "title": "EntitySummary",
+      "type": "object"
+    },
+    "ExplanationGuide": {
+      "additionalProperties": false,
+      "description": "Narration instructions for whichever LLM presents this result.",
+      "properties": {
+        "audience": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Audience",
+          "type": "string"
+        },
+        "guardrails": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 20,
+          "minItems": 4,
+          "title": "Guardrails",
+          "type": "array"
+        },
+        "must_not_claim": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 20,
+          "minItems": 1,
+          "title": "Must Not Claim",
+          "type": "array"
+        },
+        "recommended_narrative_order": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 20,
+          "title": "Recommended Narrative Order",
+          "type": "array"
+        },
+        "summary_for_llm": {
+          "maxLength": 2000,
+          "minLength": 1,
+          "title": "Summary For Llm",
+          "type": "string"
+        },
+        "what_was_solved": {
+          "maxLength": 1000,
+          "minLength": 1,
+          "title": "What Was Solved",
+          "type": "string"
+        }
+      },
+      "required": [
+        "audience",
+        "summary_for_llm",
+        "what_was_solved",
+        "must_not_claim",
+        "guardrails"
+      ],
+      "title": "ExplanationGuide",
+      "type": "object"
+    },
+    "FieldDescription": {
+      "additionalProperties": false,
+      "description": "One column of one artefact, in technical and plain terms.",
+      "properties": {
+        "interval_level": {
+          "anyOf": [
+            {
+              "exclusiveMaximum": 1.0,
+              "exclusiveMinimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Interval Level"
+        },
+        "meaning": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "Meaning",
+          "type": "string"
+        },
+        "name": {
+          "maxLength": 120,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "read_as": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "Read As",
+          "type": "string"
+        },
+        "type": {
+          "enum": [
+            "number",
+            "integer",
+            "string",
+            "boolean",
+            "date",
+            "datetime"
+          ],
+          "title": "Type",
+          "type": "string"
+        },
+        "unit": {
+          "anyOf": [
+            {
+              "maxLength": 64,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Unit"
+        }
+      },
+      "required": [
+        "name",
+        "type",
+        "meaning",
+        "read_as"
+      ],
+      "title": "FieldDescription",
+      "type": "object"
+    },
+    "Finding": {
+      "additionalProperties": false,
+      "description": "One conclusion the service is willing to stand behind.",
+      "properties": {
+        "comparison_baseline": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ComparisonBaseline"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "confidence": {
+          "enum": [
+            "high",
+            "moderate",
+            "low"
+          ],
+          "title": "Confidence",
+          "type": "string"
+        },
+        "confidence_rationale": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "Confidence Rationale",
+          "type": "string"
+        },
+        "direction": {
+          "enum": [
+            "increase",
+            "decrease",
+            "stable",
+            "not_applicable"
+          ],
+          "title": "Direction",
+          "type": "string"
+        },
+        "id": {
+          "maxLength": 64,
+          "minLength": 1,
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "title": "Id",
+          "type": "string"
+        },
+        "importance": {
+          "maximum": 100,
+          "minimum": 1,
+          "title": "Importance",
+          "type": "integer"
+        },
+        "quantity": {
+          "$ref": "#/$defs/Quantity"
+        },
+        "statement": {
+          "maxLength": 1000,
+          "minLength": 1,
+          "title": "Statement",
+          "type": "string"
+        },
+        "uncertainty": {
+          "$ref": "#/$defs/Uncertainty"
+        }
+      },
+      "required": [
+        "id",
+        "importance",
+        "statement",
+        "quantity",
+        "uncertainty",
+        "direction",
+        "confidence",
+        "confidence_rationale"
+      ],
+      "title": "Finding",
+      "type": "object"
+    },
+    "InputDigest": {
+      "additionalProperties": false,
+      "description": "Hash of one input, so the same run can be identified later.",
+      "properties": {
+        "role": {
+          "maxLength": 32,
+          "minLength": 1,
+          "pattern": "^[a-z][a-z0-9_]*$",
+          "title": "Role",
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        }
+      },
+      "required": [
+        "role",
+        "sha256"
+      ],
+      "title": "InputDigest",
+      "type": "object"
+    },
+    "InputRequirement": {
+      "additionalProperties": false,
+      "description": "One column the service reads, in business terms.",
+      "properties": {
+        "business_meaning": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "Business Meaning",
+          "type": "string"
+        },
+        "column": {
+          "maxLength": 64,
+          "minLength": 1,
+          "title": "Column",
+          "type": "string"
+        },
+        "example": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Example",
+          "type": "string"
+        },
+        "required": {
+          "title": "Required",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "column",
+        "required",
+        "business_meaning",
+        "example"
+      ],
+      "title": "InputRequirement",
+      "type": "object"
+    },
+    "InterpretationRule": {
+      "additionalProperties": false,
+      "description": "Situation -> meaning -> recommendation. Turns a number into a decision.",
+      "properties": {
+        "observed_situation": {
+          "maxLength": 300,
+          "minLength": 1,
+          "title": "Observed Situation",
+          "type": "string"
+        },
+        "what_it_means": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "What It Means",
+          "type": "string"
+        },
+        "what_to_recommend": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "What To Recommend",
+          "type": "string"
+        }
+      },
+      "required": [
+        "observed_situation",
+        "what_it_means",
+        "what_to_recommend"
+      ],
+      "title": "InterpretationRule",
+      "type": "object"
+    },
+    "Misreading": {
+      "additionalProperties": false,
+      "description": "A wrong reading seen in the field, and its correction.",
+      "properties": {
+        "correction": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "Correction",
+          "type": "string"
+        },
+        "wrong_reading": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "Wrong Reading",
+          "type": "string"
+        }
+      },
+      "required": [
+        "wrong_reading",
+        "correction"
+      ],
+      "title": "Misreading",
+      "type": "object"
+    },
+    "ModelDescription": {
+      "additionalProperties": false,
+      "description": "What was fitted, under what assumptions, and what it cannot answer.",
+      "properties": {
+        "assumptions": {
+          "items": {
+            "$ref": "#/$defs/Assumption"
+          },
+          "maxItems": 30,
+          "minItems": 1,
+          "title": "Assumptions",
+          "type": "array"
+        },
+        "display_name": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Display Name",
+          "type": "string"
+        },
+        "family": {
+          "enum": [
+            "time_series_forecast",
+            "bayesian_inference",
+            "ab_test",
+            "optimization",
+            "classification",
+            "regression",
+            "clustering",
+            "survival_analysis",
+            "simulation",
+            "association_rules"
+          ],
+          "title": "Family",
+          "type": "string"
+        },
+        "formulation": {
+          "anyOf": [
+            {
+              "maxLength": 500,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Formulation"
+        },
+        "hyperparameters": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "maxProperties": 50,
+          "title": "Hyperparameters",
+          "type": "object"
+        },
+        "not_designed_for": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 30,
+          "minItems": 1,
+          "title": "Not Designed For",
+          "type": "array"
+        },
+        "objective": {
+          "maxLength": 1000,
+          "minLength": 1,
+          "title": "Objective",
+          "type": "string"
+        },
+        "paradigm": {
+          "enum": [
+            "bayesian",
+            "frequentist",
+            "optimization",
+            "heuristic",
+            "ml_supervised",
+            "ml_unsupervised"
+          ],
+          "title": "Paradigm",
+          "type": "string"
+        },
+        "priors": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/Prior"
+          },
+          "maxItems": 30,
+          "title": "Priors",
+          "type": "array"
+        }
+      },
+      "required": [
+        "display_name",
+        "family",
+        "paradigm",
+        "objective",
+        "assumptions",
+        "hyperparameters",
+        "not_designed_for"
+      ],
+      "title": "ModelDescription",
+      "type": "object"
+    },
+    "OverallQuality": {
+      "additionalProperties": false,
+      "description": "The single verdict on whether this result can be trusted.",
+      "properties": {
+        "status": {
+          "enum": [
+            "pass",
+            "warn",
+            "fail"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "summary": {
+          "maxLength": 1000,
+          "minLength": 1,
+          "title": "Summary",
+          "type": "string"
+        }
+      },
+      "required": [
+        "status",
+        "summary"
+      ],
+      "title": "OverallQuality",
+      "type": "object"
+    },
+    "PeriodCovered": {
+      "additionalProperties": false,
+      "description": "Inclusive date range the observations span.",
+      "properties": {
+        "end": {
+          "format": "date",
+          "title": "End",
+          "type": "string"
+        },
+        "start": {
+          "format": "date",
+          "title": "Start",
+          "type": "string"
+        }
+      },
+      "required": [
+        "start",
+        "end"
+      ],
+      "title": "PeriodCovered",
+      "type": "object"
+    },
+    "Persona": {
+      "additionalProperties": false,
+      "description": "Who uses the service, and what hurts today.",
+      "properties": {
+        "pains": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 30,
+          "minItems": 1,
+          "title": "Pains",
+          "type": "array"
+        },
+        "role": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Role",
+          "type": "string"
+        }
+      },
+      "required": [
+        "role",
+        "pains"
+      ],
+      "title": "Persona",
+      "type": "object"
+    },
+    "Prior": {
+      "additionalProperties": false,
+      "description": "A prior distribution and why it was chosen.",
+      "properties": {
+        "distribution": {
+          "maxLength": 200,
+          "minLength": 1,
+          "title": "Distribution",
+          "type": "string"
+        },
+        "parameter": {
+          "maxLength": 120,
+          "minLength": 1,
+          "title": "Parameter",
+          "type": "string"
+        },
+        "rationale": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "Rationale",
+          "type": "string"
+        }
+      },
+      "required": [
+        "parameter",
+        "distribution",
+        "rationale"
+      ],
+      "title": "Prior",
+      "type": "object"
+    },
+    "Quantity": {
+      "additionalProperties": false,
+      "description": "The number itself, with its unit.",
+      "properties": {
+        "unit": {
+          "maxLength": 64,
+          "minLength": 1,
+          "title": "Unit",
+          "type": "string"
+        },
+        "value": {
+          "title": "Value",
+          "type": "number"
+        }
+      },
+      "required": [
+        "value",
+        "unit"
+      ],
+      "title": "Quantity",
+      "type": "object"
+    },
+    "ReadoutRequest": {
+      "additionalProperties": false,
+      "description": "Which request produced this readout.",
+      "properties": {
+        "origin": {
+          "enum": [
+            "web",
+            "api",
+            "mcp",
+            "batch"
+          ],
+          "title": "Origin",
+          "type": "string"
+        },
+        "parameter_id": {
+          "maxLength": 64,
+          "minLength": 1,
+          "title": "Parameter Id",
+          "type": "string"
+        },
+        "request_id": {
+          "maxLength": 64,
+          "minLength": 1,
+          "title": "Request Id",
+          "type": "string"
+        },
+        "result_id": {
+          "maxLength": 64,
+          "minLength": 1,
+          "title": "Result Id",
+          "type": "string"
+        },
+        "tenant_id": {
+          "maxLength": 64,
+          "minLength": 1,
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "title": "Tenant Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "request_id",
+        "result_id",
+        "parameter_id",
+        "tenant_id",
+        "origin"
+      ],
+      "title": "ReadoutRequest",
+      "type": "object"
+    },
+    "ReadoutService": {
+      "additionalProperties": false,
+      "description": "Which service, at which version, produced this readout.",
+      "properties": {
+        "name": {
+          "maxLength": 64,
+          "minLength": 1,
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "title": "Name",
+          "type": "string"
+        },
+        "version": {
+          "pattern": "^\\d+\\.\\d+\\.\\d+$",
+          "title": "Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "version"
+      ],
+      "title": "ReadoutService",
+      "type": "object"
+    },
+    "Reproducibility": {
+      "additionalProperties": false,
+      "description": "Seed, timing, input hashes and library versions.",
+      "properties": {
+        "compute_duration_seconds": {
+          "minimum": 0.0,
+          "title": "Compute Duration Seconds",
+          "type": "number"
+        },
+        "input_digests": {
+          "items": {
+            "$ref": "#/$defs/InputDigest"
+          },
+          "maxItems": 20,
+          "minItems": 1,
+          "title": "Input Digests",
+          "type": "array"
+        },
+        "library_versions": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "maxProperties": 20,
+          "minProperties": 1,
+          "title": "Library Versions",
+          "type": "object"
+        },
+        "random_seed": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Random Seed"
+        }
+      },
+      "required": [
+        "compute_duration_seconds",
+        "input_digests",
+        "library_versions"
+      ],
+      "title": "Reproducibility",
+      "type": "object"
+    },
+    "ServiceKnowledge": {
+      "additionalProperties": false,
+      "description": "Everything an LLM needs to know about the service itself.",
+      "properties": {
+        "common_misreadings": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/Misreading"
+          },
+          "maxItems": 30,
+          "title": "Common Misreadings",
+          "type": "array"
+        },
+        "glossary": {
+          "items": {
+            "$ref": "#/$defs/Term"
+          },
+          "maxItems": 30,
+          "minItems": 1,
+          "title": "Glossary",
+          "type": "array"
+        },
+        "input_requirements": {
+          "items": {
+            "$ref": "#/$defs/InputRequirement"
+          },
+          "maxItems": 64,
+          "minItems": 1,
+          "title": "Input Requirements",
+          "type": "array"
+        },
+        "interpretation_playbook": {
+          "items": {
+            "$ref": "#/$defs/InterpretationRule"
+          },
+          "maxItems": 30,
+          "minItems": 1,
+          "title": "Interpretation Playbook",
+          "type": "array"
+        },
+        "limitations": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 30,
+          "minItems": 1,
+          "title": "Limitations",
+          "type": "array"
+        },
+        "one_liner": {
+          "maxLength": 280,
+          "minLength": 1,
+          "title": "One Liner",
+          "type": "string"
+        },
+        "personas": {
+          "items": {
+            "$ref": "#/$defs/Persona"
+          },
+          "maxItems": 30,
+          "minItems": 1,
+          "title": "Personas",
+          "type": "array"
+        },
+        "problem_solved": {
+          "maxLength": 1000,
+          "minLength": 1,
+          "title": "Problem Solved",
+          "type": "string"
+        },
+        "what_it_does": {
+          "maxLength": 2000,
+          "minLength": 1,
+          "title": "What It Does",
+          "type": "string"
+        },
+        "when_not_to_use": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 30,
+          "minItems": 1,
+          "title": "When Not To Use",
+          "type": "array"
+        },
+        "when_to_use": {
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 30,
+          "minItems": 1,
+          "title": "When To Use",
+          "type": "array"
+        },
+        "workflow": {
+          "items": {
+            "$ref": "#/$defs/WorkflowStep"
+          },
+          "maxItems": 12,
+          "minItems": 1,
+          "title": "Workflow",
+          "type": "array"
+        }
+      },
+      "required": [
+        "one_liner",
+        "what_it_does",
+        "problem_solved",
+        "when_to_use",
+        "when_not_to_use",
+        "personas",
+        "workflow",
+        "input_requirements",
+        "interpretation_playbook",
+        "glossary",
+        "limitations"
+      ],
+      "title": "ServiceKnowledge",
+      "type": "object"
+    },
+    "Term": {
+      "additionalProperties": false,
+      "description": "A technical term and how to say it to the client.",
+      "properties": {
+        "client_language": {
+          "maxLength": 300,
+          "minLength": 1,
+          "title": "Client Language",
+          "type": "string"
+        },
+        "technical_term": {
+          "maxLength": 120,
+          "minLength": 1,
+          "title": "Technical Term",
+          "type": "string"
+        }
+      },
+      "required": [
+        "technical_term",
+        "client_language"
+      ],
+      "title": "Term",
+      "type": "object"
+    },
+    "Uncertainty": {
+      "additionalProperties": false,
+      "description": "How sure the number is, in the vocabulary of the method used.",
+      "properties": {
+        "kind": {
+          "enum": [
+            "credible_interval",
+            "confidence_interval",
+            "prediction_interval",
+            "standard_error",
+            "none"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "level": {
+          "anyOf": [
+            {
+              "exclusiveMaximum": 1.0,
+              "exclusiveMinimum": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Level"
+        },
+        "lower": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Lower"
+        },
+        "upper": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Upper"
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "title": "Uncertainty",
+      "type": "object"
+    },
+    "WorkflowStep": {
+      "additionalProperties": false,
+      "description": "One step of using the service, paired with what the LLM should say.",
+      "properties": {
+        "order": {
+          "maximum": 12,
+          "minimum": 1,
+          "title": "Order",
+          "type": "integer"
+        },
+        "what_the_llm_should_say": {
+          "maxLength": 1000,
+          "minLength": 1,
+          "title": "What The Llm Should Say",
+          "type": "string"
+        },
+        "what_the_user_does": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "What The User Does",
+          "type": "string"
+        }
+      },
+      "required": [
+        "order",
+        "what_the_user_does",
+        "what_the_llm_should_say"
+      ],
+      "title": "WorkflowStep",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "The artefact an LLM reads to explain a result without inventing.\n\nCarries conclusions, never raw arrays. Every collection here is\nbounded \u2014 nothing in this document may grow with the input size.",
+  "properties": {
+    "artifacts": {
+      "items": {
+        "$ref": "#/$defs/ArtifactDescription"
+      },
+      "maxItems": 11,
+      "minItems": 1,
+      "title": "Artifacts",
+      "type": "array"
+    },
+    "caveats": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/Caveat"
+      },
+      "maxItems": 20,
+      "title": "Caveats",
+      "type": "array"
+    },
+    "data": {
+      "$ref": "#/$defs/DataProvenance"
+    },
+    "diagnostics": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/Diagnostic"
+      },
+      "maxItems": 30,
+      "title": "Diagnostics",
+      "type": "array"
+    },
+    "explanation_guide": {
+      "$ref": "#/$defs/ExplanationGuide"
+    },
+    "findings": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/Finding"
+      },
+      "maxItems": 50,
+      "title": "Findings",
+      "type": "array"
+    },
+    "generated_at": {
+      "format": "date-time",
+      "title": "Generated At",
+      "type": "string"
+    },
+    "model": {
+      "$ref": "#/$defs/ModelDescription"
+    },
+    "overall_quality": {
+      "$ref": "#/$defs/OverallQuality"
+    },
+    "readout_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Readout Version",
+      "type": "string"
+    },
+    "reproducibility": {
+      "$ref": "#/$defs/Reproducibility"
+    },
+    "request": {
+      "$ref": "#/$defs/ReadoutRequest"
+    },
+    "service": {
+      "$ref": "#/$defs/ReadoutService"
+    },
+    "service_knowledge": {
+      "$ref": "#/$defs/ServiceKnowledge"
+    }
+  },
+  "required": [
+    "generated_at",
+    "request",
+    "service",
+    "service_knowledge",
+    "model",
+    "data",
+    "artifacts",
+    "overall_quality",
+    "explanation_guide",
+    "reproducibility"
+  ],
+  "title": "ModelReadout",
+  "type": "object"
+}

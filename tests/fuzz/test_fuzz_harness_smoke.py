@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import pytest
 
-from tests.fuzz import fuzz_contract_parser, fuzz_pubsub_decoder
+from tests.fuzz import fuzz_contract_parser, fuzz_pubsub_decoder, fuzz_readout_parser
 
 _FUZZ_SAMPLES = [
     b"",
@@ -34,3 +34,8 @@ def test_pubsub_fuzz_input_never_raises_unexpected(payload: bytes) -> None:
 @pytest.mark.parametrize("payload", _FUZZ_SAMPLES)
 def test_contract_fuzz_input_never_raises_unexpected(payload: bytes) -> None:
     fuzz_contract_parser.fuzz_one_input(payload)
+
+
+@pytest.mark.parametrize("payload", _FUZZ_SAMPLES)
+def test_readout_fuzz_input_never_raises_unexpected(payload: bytes) -> None:
+    fuzz_readout_parser.fuzz_one_input(payload)

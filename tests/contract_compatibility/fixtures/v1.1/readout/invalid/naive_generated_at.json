@@ -1,0 +1,193 @@
+{
+  "readout_version": "1.0",
+  "generated_at": "2026-07-31T14:03:11",
+  "request": {
+    "request_id": "3f2b1c8e-0000-4000-8000-000000000000",
+    "result_id": "res_0001",
+    "parameter_id": "par_0001",
+    "tenant_id": "grabatus",
+    "origin": "web"
+  },
+  "service": {
+    "name": "grabatus-basketanalysis",
+    "version": "1.0.0"
+  },
+  "service_knowledge": {
+    "one_liner": "Descobre quais produtos são comprados juntos.",
+    "what_it_does": "Minera regras de associação e ranqueia por impacto financeiro.",
+    "problem_solved": "O gerente monta combo por intuição.",
+    "when_to_use": [
+      "Definir planograma"
+    ],
+    "when_not_to_use": [
+      "Medir efeito causal — use teste A/B"
+    ],
+    "personas": [
+      {
+        "role": "Gerente comercial",
+        "pains": [
+          "Não distingo afinidade real"
+        ]
+      }
+    ],
+    "workflow": [
+      {
+        "order": 1,
+        "what_the_user_does": "Sobe a planilha",
+        "what_the_llm_should_say": "Confirmo as colunas obrigatórias."
+      }
+    ],
+    "input_requirements": [
+      {
+        "column": "transaction_id",
+        "required": true,
+        "business_meaning": "Identifica uma compra.",
+        "example": "TX-000481"
+      }
+    ],
+    "interpretation_playbook": [
+      {
+        "observed_situation": "Lift alto e addressable baixo",
+        "what_it_means": "Afinidade real em volume pequeno.",
+        "what_to_recommend": "Testar em uma loja."
+      }
+    ],
+    "common_misreadings": [],
+    "glossary": [
+      {
+        "technical_term": "lift",
+        "client_language": "mais que o acaso"
+      }
+    ],
+    "limitations": [
+      "Não mede canibalização."
+    ]
+  },
+  "model": {
+    "display_name": "Regras de associação por FP-Growth",
+    "family": "association_rules",
+    "paradigm": "heuristic",
+    "objective": "Encontrar produtos comprados juntos mais que o acaso.",
+    "formulation": "lift(A→B) = P(B|A) / P(B)",
+    "assumptions": [
+      {
+        "statement": "Cada transaction_id é uma cesta única.",
+        "violation_impact": "Cestas fragmentadas inflam o suporte.",
+        "checked": true
+      }
+    ],
+    "hyperparameters": {
+      "min_support": 0.005
+    },
+    "priors": [],
+    "not_designed_for": [
+      "inferir causalidade"
+    ]
+  },
+  "data": {
+    "observation_count": 142500,
+    "granularity": "transaction",
+    "period_covered": {
+      "start": "2026-01-01",
+      "end": "2026-06-30"
+    },
+    "entities": [
+      {
+        "label": "SKU",
+        "count": 8200
+      }
+    ],
+    "filters_applied": [],
+    "known_gaps": [],
+    "quality_flags": []
+  },
+  "artifacts": [
+    {
+      "role": "rules_json",
+      "uri": "gs://gbt-storage-grabatus/user_999/rules.json",
+      "format": "json",
+      "description": "Regras ranqueadas por impacto financeiro.",
+      "fields": [
+        {
+          "name": "lift",
+          "type": "number",
+          "unit": null,
+          "interval_level": null,
+          "meaning": "Razão entre frequência observada e esperada.",
+          "read_as": "Quantas vezes mais provável que o acaso."
+        }
+      ]
+    }
+  ],
+  "findings": [
+    {
+      "id": "rule_001",
+      "importance": 1,
+      "statement": "Vinho premium e queijo importado aparecem juntos em 73% das cestas.",
+      "quantity": {
+        "value": 18500.0,
+        "unit": "BRL"
+      },
+      "uncertainty": {
+        "kind": "none",
+        "level": null,
+        "lower": null,
+        "upper": null
+      },
+      "direction": "increase",
+      "comparison_baseline": null,
+      "confidence": "high",
+      "confidence_rationale": "Baseado em 1.730 cestas."
+    }
+  ],
+  "diagnostics": [
+    {
+      "name": "data_quality_score",
+      "value": 0.87,
+      "threshold": "> 0.70",
+      "status": "pass",
+      "meaning": "Transações retidas e SKUs com preço e categoria."
+    }
+  ],
+  "overall_quality": {
+    "status": "pass",
+    "summary": "Dados suficientes."
+  },
+  "caveats": [
+    {
+      "severity": "high",
+      "statement": "Não separa período promocional de orgânico.",
+      "do_not_conclude": "Não atribua a afinidade a preferência do cliente."
+    }
+  ],
+  "explanation_guide": {
+    "audience": "gerente comercial sem formação estatística",
+    "summary_for_llm": "Três combos concentram a maior parte da oportunidade.",
+    "what_was_solved": "Quais combos valem virar ação de gôndola.",
+    "recommended_narrative_order": [
+      "rule_001"
+    ],
+    "must_not_claim": [
+      "que a associação prova causa"
+    ],
+    "guardrails": [
+      "Responda apenas com o que este documento afirma. Não extrapole, não estime e não complete lacunas com conhecimento geral sobre o setor.",
+      "Se a pergunta não puder ser respondida com este documento, diga que não sabe e ofereça o contato da Grabatus. Nunca produza um número que não esteja escrito aqui.",
+      "Não recalcule nada a partir de dados brutos. Os números deste documento já são o resultado final da análise.",
+      "Sempre que encontrar uma lacuna — algo que o cliente pediu e este documento não responde — registre uma sugestão de melhoria no canal da Grabatus, descrevendo o que faltou."
+    ]
+  },
+  "reproducibility": {
+    "random_seed": null,
+    "compute_duration_seconds": 47.0,
+    "input_digests": [
+      {
+        "role": "transactions",
+        "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    ],
+    "library_versions": {
+      "mlxtend": "0.23.1"
+    }
+  }
+}
