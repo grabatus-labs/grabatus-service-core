@@ -256,6 +256,8 @@ Every public error inherits `GrabatusServiceError` and carries a stable
 | I/O      | `FormatParsingError`              | Bytes did not parse as the declared format.       |
 | Compute  | `ComputeError`                    | Service-specific compute failure.                 |
 | Compute  | `ComputeTimeoutError`             | Compute exceeded its budget.                      |
+| Compute  | `MissingReadoutError`             | Compute produced no `model_readout` role.         |
+| Compute  | `InvalidReadoutError`             | The `model_readout` fails the readout schema.     |
 | Webhook  | `WebhookAuthError`                | JWT signing/verification failed.                  |
 | Webhook  | `WebhookError`                    | Network failure delivering the callback.          |
 
@@ -838,17 +840,23 @@ uv run python -c "import json; from tests.unit.contract.readout.builders import 
 
 The schema above exists and is locked by a byte-for-byte JSON Schema
 snapshot test (`tests/contract_compatibility/snapshots/v1.1/model_readout.schema.json`),
-with valid and invalid fixtures exercising every model validator. **Runtime
-enforcement is not wired up yet.** No service is required to emit a
-`model_readout` today, and none is rejected for omitting or malforming
-one. The remaining wiring — a `VALIDATE_READOUT` step in the
-`ServiceRunner` between `run_compute` and `save_outputs`, the
-`MissingReadoutError` / `InvalidReadoutError` error pair (both under
-`ComputeError`, both `retriable=False`), and the `protocol_version:
-"1.1"` bump that makes the readout mandatory — belong to later phases of
-this work. Do not generate platform integration code that assumes a
-`model_readout` will always be present until that lands and this section
-is updated to say so.
+with valid and invalid fixtures exercising every model validator.
+
+**Runtime enforcement is live.** `ServiceRunner` runs a `validate_readout`
+step between `run_compute` and `save_outputs`. A compute backend that
+returns no `model_readout` key in its `ComputeResult` fails with
+`MissingReadoutError`; one whose readout does not satisfy the schema above
+fails with `InvalidReadoutError`. Both sit under `ComputeError` and are
+`retriable=False` — a backend that omits the readout will omit it again on
+the next attempt. Both fire before anything is written to storage, so a run
+that cannot be explained produces no output at all.
+
+Two pieces remain. The readout is validated on the `ComputeResult`, **not
+yet persisted**: `model_readout` is not a declared output role, so nothing
+writes it to storage and the platform cannot fetch it. That, together with
+the `protocol_version: "1.1"` bump and raising `_MAX_OUTPUTS` from 10 to
+11, is the next phase. Until it lands, generate platform integration code
+that expects the readout to be *validated* but not *retrievable*.
 
 ---
 

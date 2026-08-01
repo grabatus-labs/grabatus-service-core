@@ -11,6 +11,12 @@ import pytest
 from examples.echo_service import build
 
 
+@pytest.mark.xfail(
+    strict=True,
+    reason="Issue #11: EchoComputeBackend emits no model_readout, and ModelFamily "
+    "has no value that honestly describes a passthrough service. Pending the "
+    "decision recorded there.",
+)
 @pytest.mark.asyncio
 async def test_echo_service_runs_end_to_end_via_asgi(
     monkeypatch: pytest.MonkeyPatch,

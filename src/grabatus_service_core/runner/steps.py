@@ -16,8 +16,12 @@ from typing import TYPE_CHECKING, Any
 
 from pydantic import ValidationError
 
+from grabatus_service_core.contract.readout.enums import READOUT_OUTPUT_ROLE
+from grabatus_service_core.contract.readout.root import ModelReadout
 from grabatus_service_core.errors import (
     InvalidContractError,
+    InvalidReadoutError,
+    MissingReadoutError,
     UnsupportedProtocolVersionError,
 )
 from grabatus_service_core.ports.values import (
@@ -151,6 +155,27 @@ def run_compute(
 ) -> ComputeResult:
     """Step 6 — invoke the service compute backend."""
     return compute.run(inputs=inputs, parameters=authorized.contract.parameters)
+
+
+def validate_readout(*, result: ComputeResult) -> ModelReadout:
+    """Step 7 — refuse a result that no LLM could explain without inventing.
+
+    The readout is the only artifact carrying what the numbers mean. A run
+    that produces none is a run whose output nobody can be told about, so it
+    fails here rather than reaching storage.
+    """
+    payload = result.by_role.get(READOUT_OUTPUT_ROLE)
+    if payload is None:
+        raise MissingReadoutError(
+            f"compute produced no {READOUT_OUTPUT_ROLE!r} output; "
+            f"got roles {sorted(result.by_role)!r}",
+        )
+    try:
+        return ModelReadout.model_validate_json(payload)
+    except ValidationError as exc:
+        raise InvalidReadoutError(
+            f"{READOUT_OUTPUT_ROLE!r} does not satisfy the readout schema: {exc}",
+        ) from exc
 
 
 def save_outputs(

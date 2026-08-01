@@ -33,6 +33,7 @@ from grabatus_service_core.runner.steps import (
     run_compute,
     save_outputs,
     validate,
+    validate_readout,
 )
 
 if TYPE_CHECKING:
@@ -114,6 +115,7 @@ class ServiceRunner(Generic[ParamsT]):  # noqa: UP046 — TypeVar form needed fo
                 inputs=inputs,
                 compute=self.compute,
             )
+            validate_readout(result=compute_result)
             receipts = save_outputs(
                 authorized=authorized,
                 credentials=credentials,

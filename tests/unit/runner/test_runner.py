@@ -12,10 +12,12 @@ from pydantic import BaseModel
 from grabatus_service_core.contract.base import BaseServiceContract
 from grabatus_service_core.errors import (
     ComputeError,
+    InputNotFoundError,
     InvalidContractError,
+    MissingReadoutError,
     OutputWriteError,
 )
-from grabatus_service_core.ports.values import RawMessage
+from grabatus_service_core.ports.values import Credentials, RawMessage
 from grabatus_service_core.runner import (
     RuntimeMode,
     ServiceRunner,
@@ -342,6 +344,30 @@ def test_worker_mode_runs_full_pipeline_like_monolith() -> None:
 
     assert result.status == "ok"
     assert result.receipts is not None
+
+
+def test_a_backend_that_emits_no_readout_fails_before_anything_is_written() -> None:
+    storage = _ok_storage()
+    runner = _runner(
+        compute=make_fake_compute_backend(
+            required_input_roles=frozenset({"timeseries"}),
+            output_roles=frozenset({"result_json"}),
+            outputs={"result_json": b"forecast-bytes"},
+            emit_readout=False,
+        ),
+        storage=storage,
+    )
+
+    result = runner.execute(_raw_for(_valid_contract_dict()))
+
+    assert result.status == "error"
+    assert isinstance(result.error, MissingReadoutError)
+    # The gate sits before save_outputs: the declared output was never written.
+    with pytest.raises(InputNotFoundError):
+        storage.read(
+            spec=make_input_spec(source_uri="gs://gbt-storage-grabatus/user_999/out.json"),
+            credentials=Credentials(token=b"", token_type="none"),
+        )
 
 
 def test_direct_construction_in_receiver_mode_without_worker_job_name_raises() -> None:
