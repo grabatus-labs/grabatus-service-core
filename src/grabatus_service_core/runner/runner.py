@@ -19,6 +19,8 @@ from typing import TYPE_CHECKING, Any, Generic
 from uuid import UUID
 
 from grabatus_service_core.contract.base import ParamsT
+from grabatus_service_core.contract.readout.enums import READOUT_OUTPUT_ROLE
+from grabatus_service_core.contract.version import READOUT_PROTOCOL_VERSION
 from grabatus_service_core.errors import (
     GrabatusServiceError,
     InvalidContractError,
@@ -194,7 +196,7 @@ class ServiceRunner(Generic[ParamsT]):  # noqa: UP046 — TypeVar form needed fo
         # as instance attributes.
         required = self.compute.REQUIRED_INPUT_ROLES
         optional = self.compute.OPTIONAL_INPUT_ROLES
-        outputs_required = self.compute.OUTPUT_ROLES
+        outputs_required = self._expected_output_roles(contract)
         declared_inputs = {item.role for item in contract.inputs}
         declared_outputs = {item.role for item in contract.outputs}
         accepted_inputs = required | optional
@@ -215,6 +217,20 @@ class ServiceRunner(Generic[ParamsT]):  # noqa: UP046 — TypeVar form needed fo
                 f"contract output roles {sorted(declared_outputs)!r} do not match "
                 f"backend OUTPUT_ROLES {sorted(outputs_required)!r}",
             )
+
+    def _expected_output_roles(
+        self,
+        contract: BaseServiceContract[ParamsT],
+    ) -> frozenset[str]:
+        """Add the readout role the SDK owns, so no service has to remember it.
+
+        A service declares only the artifacts it computes. From protocol 1.1
+        on, the readout is part of every contract whether the service thought
+        about it or not.
+        """
+        if contract.envelope.protocol_version != READOUT_PROTOCOL_VERSION:
+            return self.compute.OUTPUT_ROLES
+        return self.compute.OUTPUT_ROLES | {READOUT_OUTPUT_ROLE}
 
     def _make_error_result(
         self,

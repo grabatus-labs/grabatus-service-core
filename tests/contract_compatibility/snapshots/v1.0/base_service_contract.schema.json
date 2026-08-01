@@ -117,7 +117,10 @@
           "type": "string"
         },
         "protocol_version": {
-          "const": "1.0",
+          "enum": [
+            "1.0",
+            "1.1"
+          ],
           "title": "Protocol Version",
           "type": "string"
         },
@@ -557,7 +560,7 @@
       "items": {
         "$ref": "#/$defs/OutputSpec"
       },
-      "maxItems": 10,
+      "maxItems": 11,
       "minItems": 1,
       "title": "Outputs",
       "type": "array"

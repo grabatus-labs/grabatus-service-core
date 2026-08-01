@@ -18,6 +18,7 @@ from pydantic import ValidationError
 
 from grabatus_service_core.contract.readout.enums import READOUT_OUTPUT_ROLE
 from grabatus_service_core.contract.readout.root import ModelReadout
+from grabatus_service_core.contract.version import SUPPORTED_PROTOCOL_VERSIONS
 from grabatus_service_core.errors import (
     InvalidContractError,
     InvalidReadoutError,
@@ -60,7 +61,6 @@ if TYPE_CHECKING:
     from grabatus_service_core.security.scheme_allowlist import SchemeAllowlist
 
 
-_SUPPORTED_PROTOCOL_VERSIONS = frozenset({"1.0"})
 _NULL_TOKEN_TYPE = "none"  # noqa: S105  # nosec B105 — placeholder for "no creds needed"
 
 
@@ -85,10 +85,10 @@ def validate(
     envelope = payload.get("envelope")
     if isinstance(envelope, dict):
         version = envelope.get("protocol_version")
-        if isinstance(version, str) and version not in _SUPPORTED_PROTOCOL_VERSIONS:
+        if isinstance(version, str) and version not in SUPPORTED_PROTOCOL_VERSIONS:
             raise UnsupportedProtocolVersionError(
                 f"unsupported protocol_version={version!r}; "
-                f"supported={sorted(_SUPPORTED_PROTOCOL_VERSIONS)!r}",
+                f"supported={sorted(SUPPORTED_PROTOCOL_VERSIONS)!r}",
             )
     try:
         contract = contract_type.model_validate(payload)

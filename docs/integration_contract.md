@@ -7,8 +7,11 @@ the error taxonomy mapped onto both. It is the source of truth — any
 disagreement between this file and an implementation is a bug in the
 implementation.
 
-The protocol is version 1.0. Breaking changes ship as a new
-`protocol_version`; additive fields ship under the same version.
+The protocol has two live versions. `1.0` is the original contract.
+`1.1` adds one thing: `model_readout` is a declared output, so the
+readout a service produces is written to storage and the platform can
+fetch it. Breaking changes ship as a new `protocol_version`; additive
+fields ship under the same version.
 
 ---
 
@@ -246,7 +249,7 @@ Every public error inherits `GrabatusServiceError` and carries a stable
 | Decode   | `MalformedMessageError`           | Pub/Sub `message.data` is not valid JSON / b64.   |
 | Contract | `InvalidContractError`            | Schema valid but a field rule fails.              |
 | Contract | `UnknownServiceError`             | `service.name` is not in the deployment registry. |
-| Contract | `UnsupportedProtocolVersionError` | `envelope.protocol_version` is not 1.0.           |
+| Contract | `UnsupportedProtocolVersionError` | `envelope.protocol_version` is neither 1.0 nor 1.1. |
 | Auth     | `UnauthorizedUriError`            | URI fails the tenant-prefix check.                |
 | Auth     | `UnsupportedSchemeError`          | URI scheme is not on the allowlist.               |
 | Auth     | `BlockedHostError`                | URI host is on the blocklist.                     |
@@ -268,7 +271,14 @@ Human messages may evolve; do not match on them.
 
 ## 4. Versioning
 
-- `protocol_version: "1.0"` is the only accepted value today.
+- `protocol_version` accepts `"1.0"` and `"1.1"`.
+- Under `"1.1"` the contract **must** declare an output with role
+  `model_readout`; under `"1.0"` it must **not**. The role is owned by
+  the SDK — a service never lists it in its own `OUTPUT_ROLES`, and the
+  runner adds it to the expected set on its behalf. A contract that gets
+  this wrong fails with `InvalidContractError` before any I/O.
+- `outputs` accepts up to 11 entries: 10 service artefacts plus the
+  readout.
 - New optional fields are additive within the same version (Pydantic
   models are `extra="forbid"`, so adding a field is a breaking change
   to existing producers — the platform should always emit the latest
@@ -836,10 +846,10 @@ uv run python -c "import json; from tests.unit.contract.readout.builders import 
 }
 ```
 
-### State: schema only, not yet enforced
+### State: enforced and persisted under protocol 1.1
 
-The schema above exists and is locked by a byte-for-byte JSON Schema
-snapshot test (`tests/contract_compatibility/snapshots/v1.1/model_readout.schema.json`),
+The schema above is locked by a byte-for-byte JSON Schema snapshot test
+(`tests/contract_compatibility/snapshots/v1.1/model_readout.schema.json`),
 with valid and invalid fixtures exercising every model validator.
 
 **Runtime enforcement is live.** `ServiceRunner` runs a `validate_readout`
@@ -851,12 +861,17 @@ fails with `InvalidReadoutError`. Both sit under `ComputeError` and are
 the next attempt. Both fire before anything is written to storage, so a run
 that cannot be explained produces no output at all.
 
-Two pieces remain. The readout is validated on the `ComputeResult`, **not
-yet persisted**: `model_readout` is not a declared output role, so nothing
-writes it to storage and the platform cannot fetch it. That, together with
-the `protocol_version: "1.1"` bump and raising `_MAX_OUTPUTS` from 10 to
-11, is the next phase. Until it lands, generate platform integration code
-that expects the readout to be *validated* but not *retrievable*.
+**Persistence follows the protocol version.** Under `1.1` the contract
+declares a `model_readout` output and the runner writes the artefact there
+like any other, so the platform fetches it by URI. Under `1.0` the readout
+is still validated but has nowhere declared to go, and is dropped after the
+check. Emit `1.1` contracts to retrieve readouts.
+
+One gap remains open, tracked in issue #13: `ComputeBackendPort.run`
+receives only `inputs` and `parameters`, so a service cannot see the
+`request_id`, `result_id`, `parameter_id`, `tenant_id` and `origin` that
+`ReadoutRequest` requires. Until that is resolved, only test doubles can
+populate the `request` block correctly.
 
 ---
 

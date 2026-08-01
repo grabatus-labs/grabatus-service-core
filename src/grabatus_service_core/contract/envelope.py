@@ -8,7 +8,9 @@ from uuid import UUID
 from pydantic import AwareDatetime, BaseModel, ConfigDict
 
 Origin = Literal["web", "api", "mcp", "internal"]
-ProtocolVersion = Literal["1.0"]
+# 1.1 adds the mandatory `model_readout` output. 1.0 contracts still run —
+# their readout is validated but has nowhere declared to be written.
+ProtocolVersion = Literal["1.0", "1.1"]
 
 
 class Envelope(BaseModel):

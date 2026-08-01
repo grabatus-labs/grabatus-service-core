@@ -19,7 +19,8 @@ from grabatus_service_core.contract.service_descriptor import (
 )
 
 _MAX_INPUTS = 10
-_MAX_OUTPUTS = 10
+# 10 service outputs plus the mandatory model_readout of protocol 1.1.
+_MAX_OUTPUTS = 11
 
 ParamsT = TypeVar("ParamsT", bound=BaseModel)
 
