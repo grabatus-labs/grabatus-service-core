@@ -317,16 +317,16 @@ that owns it.
 | Field          | Type    | Required | Constraints                                    | Meaning                                              |
 | -------------- | ------- | -------- | ----------------------------------------------- | ------------------------------------------------------ |
 | `request_id`   | string  | yes      | `min_length=1`, `max_length=64`                  | Correlates the readout to the platform request that produced it. |
-| `result_id`    | string  | yes      | `min_length=1`, `max_length=64`                  | Opaque platform id of the result record.                |
-| `parameter_id` | string  | yes      | `min_length=1`, `max_length=64`                  | Opaque platform id of the parameter set used.           |
-| `tenant_id`    | string  | yes      | `min_length=1`, `max_length=64`, pattern `^[a-z][a-z0-9-]*$` | Tenant that owns this readout.        |
-| `origin`       | literal | yes      | one of `"web"`, `"api"`, `"mcp"`, `"batch"`       | Where the originating request came from.                |
+| `result_id`    | string  | yes      | `min_length=1`, `max_length=128`                 | Opaque platform id of the result record. Matches `contract.references.References`. |
+| `parameter_id` | string  | yes      | `min_length=1`, `max_length=128`                 | Opaque platform id of the parameter set used. Matches `contract.references.References`. |
+| `tenant_id`    | string  | yes      | `min_length=1`, `max_length=64`, pattern `^[a-z0-9-]+$` | Tenant that owns this readout. Same pattern as `contract.identity.Identity.tenant_id`. |
+| `origin`       | literal | yes      | one of `"web"`, `"api"`, `"mcp"`, `"internal"`    | Where the originating request came from. Imported from `contract.envelope.Origin` — not a second, independent vocabulary. |
 
 ### `service` fields (`ReadoutService`)
 
 | Field     | Type   | Required | Constraints                                          | Meaning                                        |
 | --------- | ------ | -------- | ------------------------------------------------------ | ------------------------------------------------- |
-| `name`    | string | yes      | `min_length=1`, `max_length=64`, pattern `^[a-z][a-z0-9-]*$` | Service slug, e.g. `grabatus-basketanalysis`. |
+| `name`    | string | yes      | `min_length=1`, `max_length=64`, pattern `^[a-z][a-z0-9_-]*$` | Service slug, e.g. `grabatus-basketanalysis`. Same pattern as `contract.service_descriptor.ServiceDescriptor.name`. |
 | `version` | string | yes      | pattern `^\d+\.\d+\.\d+$` (strict semver)                | Service version that produced this readout.     |
 
 ### `service_knowledge` fields

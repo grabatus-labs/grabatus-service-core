@@ -8,7 +8,7 @@ import pytest
 from pydantic import ValidationError
 
 from grabatus_service_core.contract.readout.guide import BASE_GUARDRAILS, ExplanationGuide
-from grabatus_service_core.contract.readout.root import ModelReadout
+from grabatus_service_core.contract.readout.root import ModelReadout, ReadoutRequest, ReadoutService
 
 
 def test_valid_readout_round_trips(valid_readout: ModelReadout) -> None:
@@ -163,3 +163,64 @@ def test_model_construct_on_readout_itself_bypasses_validation(
     payload["explanation_guide"] = constructed_guide
     readout = ModelReadout.model_construct(**payload)
     assert readout.explanation_guide.guardrails == ("Invente à vontade.",)
+
+
+def _request(**overrides: object) -> ReadoutRequest:
+    payload: dict[str, object] = {
+        "request_id": "3f2b1c8e-0000-4000-8000-000000000000",
+        "result_id": "res_0001",
+        "parameter_id": "par_0001",
+        "tenant_id": "grabatus",
+        "origin": "web",
+    }
+    payload.update(overrides)
+    return ReadoutRequest(**payload)  # type: ignore[arg-type]
+
+
+def test_request_accepts_the_envelope_origin_vocabulary() -> None:
+    """origin must accept exactly envelope.Origin — including "internal".
+
+    Previously the readout redeclared its own vocabulary
+    (web/api/mcp/batch) instead of importing envelope.Origin
+    (web/api/mcp/internal): a legal "internal" envelope produced a
+    readout request that could not be built.
+    """
+    assert _request(origin="internal").origin == "internal"
+
+
+def test_request_rejects_batch_origin_now_that_it_is_unreachable() -> None:
+    """ "batch" was never producible by any envelope — dropping it is correct."""
+    with pytest.raises(ValidationError):
+        _request(origin="batch")
+
+
+def test_request_tenant_id_accepts_the_identity_pattern() -> None:
+    """tenant_id must accept exactly what contract.identity.Identity accepts.
+
+    The readout's own, narrower pattern required a leading letter and
+    rejected a legal tenant slug starting with a digit, like "3m".
+    """
+    assert _request(tenant_id="3m").tenant_id == "3m"
+
+
+def test_request_result_and_parameter_id_accept_128_chars() -> None:
+    """Must accept exactly what contract.references.References accepts.
+
+    The readout capped these at 64 chars while the platform's own
+    References model allows 128 — a legal, longer platform id was
+    rejected here even though it round-trips fine everywhere else.
+    """
+    platform_id = "x" * 128
+    request = _request(result_id=platform_id, parameter_id=platform_id)
+    assert request.result_id == platform_id
+    assert request.parameter_id == platform_id
+
+
+def test_service_name_accepts_the_service_descriptor_pattern() -> None:
+    """name must accept exactly what contract.service_descriptor accepts.
+
+    The readout's own pattern forbade the underscore that
+    ServiceDescriptor allows, rejecting a legal service name like
+    "basket_analysis".
+    """
+    assert ReadoutService(name="basket_analysis", version="1.0.0").name == "basket_analysis"
