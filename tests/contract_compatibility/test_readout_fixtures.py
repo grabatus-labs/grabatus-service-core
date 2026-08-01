@@ -18,7 +18,18 @@ _FIXTURE_ROOT = Path(__file__).resolve().parent / "fixtures" / "v1.1" / "readout
 
 
 def _collect(directory: Path) -> list[Path]:
-    return sorted(directory.glob("*.json"))
+    """Glob fixtures, refusing to silently pass on an emptied/renamed directory.
+
+    A bare glob returns `[]` for a directory that no longer exists or was
+    accidentally cleared, and `@pytest.mark.parametrize` over an empty list
+    collects zero tests instead of failing — so a regression that deletes
+    ``tampered_guardrails.json`` (the only pinned regression test for the
+    anti-hallucination guarantee) would retire silently instead of failing.
+    """
+    assert directory.is_dir(), f"fixture directory missing or renamed: {directory}"
+    paths = sorted(directory.glob("*.json"))
+    assert paths, f"fixture directory is empty: {directory}"
+    return paths
 
 
 @pytest.mark.parametrize("fixture_path", _collect(_FIXTURE_ROOT / "valid"), ids=lambda p: p.name)
