@@ -42,18 +42,22 @@ class ExplanationGuide(BaseModel):
         default=(), max_length=_MAX_NARRATIVE_STEPS
     )
     must_not_claim: tuple[str, ...] = Field(min_length=1, max_length=_MAX_CLAIMS)
-    guardrails: tuple[str, ...] = Field(max_length=_MAX_GUARDRAILS)
+    guardrails: tuple[str, ...] = Field(min_length=len(BASE_GUARDRAILS), max_length=_MAX_GUARDRAILS)
 
-    @field_validator("guardrails")
+    @field_validator("guardrails", mode="before")
     @classmethod
-    def _starts_with_the_base(cls, rules: tuple[str, ...]) -> tuple[str, ...]:
+    def _starts_with_the_base(cls, rules: object) -> object:
         """Prefix, not membership: order and wording both carry meaning.
 
-        The base length is enforced here rather than via ``Field(min_length=...)``
-        so that a too-short ``guardrails`` tuple fails with this same
-        prefix-violation message instead of Pydantic's generic "too short".
+        Runs in "before" mode so the prefix check fires ahead of Pydantic's
+        own length validation. That lets ``Field(min_length=...)`` stay in
+        place — preserving ``minItems`` in the generated JSON Schema — while
+        a too-short, rewritten, or reordered ``guardrails`` still fails with
+        this same message instead of Pydantic's generic "too short".
         """
-        prefix = rules[: len(BASE_GUARDRAILS)]
+        if not isinstance(rules, (list, tuple)):
+            raise ValueError(f"guardrails must be a sequence of strings, got {rules!r}")
+        prefix = tuple(rules[: len(BASE_GUARDRAILS)])
         if prefix != BASE_GUARDRAILS:
             raise ValueError(f"guardrails must start with the SDK base guardrails, got {prefix!r}")
         return rules

@@ -71,6 +71,12 @@ def test_guide_rejects_service_rules_before_the_base() -> None:
         _guide(guardrails=prefixed)
 
 
+def test_guide_rejects_a_non_sequence_guardrails_value() -> None:
+    """A malformed payload must fail as a Pydantic error, not a raw TypeError."""
+    with pytest.raises(ValidationError, match="must be a sequence of strings"):
+        _guide(guardrails=None)
+
+
 def test_builder_fills_the_base_automatically() -> None:
     guide = build_explanation_guide(
         audience="gerente comercial",
