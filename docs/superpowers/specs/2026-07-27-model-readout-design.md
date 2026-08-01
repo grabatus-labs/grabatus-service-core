@@ -1,7 +1,12 @@
 # Design — `model_readout`: saída de modelo legível e explicável por IA
 
 Data: 2026-07-27
-Status: aprovado (aguardando plano de implementação)
+Status: **SUBSTITUÍDA** em 2026-07-31 por
+`2026-07-31-model-readout-unificado-design.md`, que funde este design com a
+Camada de Conhecimento. Não implementar a partir deste documento — as §§4 e 5
+mudaram (bloco `service_knowledge` novo, `glossary` migrado para fora do
+`explanation_guide`, `guardrails[]` com validação de prefixo, `data.quality_flags`
+novo). Mantido como registro do raciocínio original.
 
 ## 1. Problema
 
