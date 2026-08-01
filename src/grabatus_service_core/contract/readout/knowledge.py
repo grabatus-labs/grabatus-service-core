@@ -7,14 +7,20 @@ inventing the context around the numbers.
 
 from __future__ import annotations
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from typing import Annotated
 
-from grabatus_service_core.contract.readout.enums import MAX_ITEMS
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_validator
+
+from grabatus_service_core.contract.readout.enums import ITEM_MAX_LENGTH, MAX_ITEMS
 
 _FROZEN = ConfigDict(extra="forbid", frozen=True)
 
 _MAX_WORKFLOW_STEPS = 12
 _MAX_COLUMNS = 64
+
+# Each bullet is one short, human-written line — not a place to smuggle a
+# large payload as a single tuple item.
+_Bullet = Annotated[str, StringConstraints(max_length=ITEM_MAX_LENGTH)]
 
 
 class Persona(BaseModel):
@@ -84,8 +90,8 @@ class ServiceKnowledge(BaseModel):
     what_it_does: str = Field(min_length=1, max_length=2000)
     problem_solved: str = Field(min_length=1, max_length=1000)
 
-    when_to_use: tuple[str, ...] = Field(min_length=1, max_length=MAX_ITEMS)
-    when_not_to_use: tuple[str, ...] = Field(min_length=1, max_length=MAX_ITEMS)
+    when_to_use: tuple[_Bullet, ...] = Field(min_length=1, max_length=MAX_ITEMS)
+    when_not_to_use: tuple[_Bullet, ...] = Field(min_length=1, max_length=MAX_ITEMS)
 
     personas: tuple[Persona, ...] = Field(min_length=1, max_length=MAX_ITEMS)
     workflow: tuple[WorkflowStep, ...] = Field(min_length=1, max_length=_MAX_WORKFLOW_STEPS)
@@ -96,7 +102,7 @@ class ServiceKnowledge(BaseModel):
     )
     common_misreadings: tuple[Misreading, ...] = Field(default=(), max_length=MAX_ITEMS)
     glossary: tuple[Term, ...] = Field(min_length=1, max_length=MAX_ITEMS)
-    limitations: tuple[str, ...] = Field(min_length=1, max_length=MAX_ITEMS)
+    limitations: tuple[_Bullet, ...] = Field(min_length=1, max_length=MAX_ITEMS)
 
     @field_validator("workflow")
     @classmethod

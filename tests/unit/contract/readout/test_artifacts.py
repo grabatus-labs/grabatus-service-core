@@ -115,3 +115,30 @@ def test_artifact_is_frozen() -> None:
     artifact = _artifact()
     with pytest.raises(ValidationError):
         artifact.role = "outro"  # type: ignore[misc]
+
+
+def test_uri_rejects_the_data_scheme() -> None:
+    """`data:` embeds its payload directly in the URI -- the cleanest way
+    to smuggle a large sample into a readout that carries no raw arrays."""
+    with pytest.raises(ValidationError):
+        _artifact(uri="data:application/json;base64," + "A" * 400_000)
+
+
+def test_uri_rejects_the_inline_scheme() -> None:
+    """`inline://` is the same smuggling shape as `data:` -- it embeds its
+    payload directly in the URI too, even though InputSpec/OutputSpec
+    accept `inline` as a legitimate input/output *format*."""
+    with pytest.raises(ValidationError):
+        _artifact(uri="inline://base64," + "A" * 400_000)
+
+
+def test_uri_accepts_the_gs_and_bigquery_schemes() -> None:
+    """The two schemes an artifact -- a file the service already wrote --
+    is actually expected to live under."""
+    assert _artifact(uri="gs://gbt-storage-grabatus/user_999/rules.json").uri is not None
+    assert _artifact(uri="bigquery://project/dataset/table").uri is not None
+
+
+def test_uri_rejects_an_oversized_value() -> None:
+    with pytest.raises(ValidationError):
+        _artifact(uri="gs://gbt-storage-grabatus/" + "a" * 3000)

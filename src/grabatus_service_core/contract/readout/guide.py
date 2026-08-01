@@ -8,9 +8,9 @@ rules but has no mechanism to weaken the guarantee.
 
 from __future__ import annotations
 
-from typing import Final
+from typing import Annotated, Final
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_validator
 
 BASE_GUARDRAILS: Final[tuple[str, ...]] = (
     "Responda apenas com o que este documento afirma. Não extrapole, não "
@@ -29,6 +29,23 @@ _MAX_GUARDRAILS = 20
 _MAX_CLAIMS = 20
 _MAX_NARRATIVE_STEPS = 20
 
+# A guardrail is a full paragraph (the longest base guardrail is ~172
+# chars); this leaves services generous room without opening the field to
+# a megabyte-scale payload smuggled as a single "guardrail".
+_MAX_GUARDRAIL_LENGTH = 500
+_GuardrailText = Annotated[str, StringConstraints(max_length=_MAX_GUARDRAIL_LENGTH)]
+
+# A claim is one sentence-length statement, the same scale as other
+# "statement" fields across the readout (e.g. Caveat.statement).
+_MAX_CLAIM_LENGTH = 500
+_ClaimText = Annotated[str, StringConstraints(max_length=_MAX_CLAIM_LENGTH)]
+
+# recommended_narrative_order holds Finding.id values, which are
+# themselves bounded to 64 chars (findings.py) — matching that here means
+# a narrative step can reference any legal finding id and nothing longer.
+_MAX_NARRATIVE_STEP_LENGTH = 64
+_NarrativeStep = Annotated[str, StringConstraints(max_length=_MAX_NARRATIVE_STEP_LENGTH)]
+
 
 class ExplanationGuide(BaseModel):
     """Narration instructions for whichever LLM presents this result."""
@@ -45,11 +62,13 @@ class ExplanationGuide(BaseModel):
     audience: str = Field(min_length=1, max_length=200)
     summary_for_llm: str = Field(min_length=1, max_length=2000)
     what_was_solved: str = Field(min_length=1, max_length=1000)
-    recommended_narrative_order: tuple[str, ...] = Field(
+    recommended_narrative_order: tuple[_NarrativeStep, ...] = Field(
         default=(), max_length=_MAX_NARRATIVE_STEPS
     )
-    must_not_claim: tuple[str, ...] = Field(min_length=1, max_length=_MAX_CLAIMS)
-    guardrails: tuple[str, ...] = Field(min_length=len(BASE_GUARDRAILS), max_length=_MAX_GUARDRAILS)
+    must_not_claim: tuple[_ClaimText, ...] = Field(min_length=1, max_length=_MAX_CLAIMS)
+    guardrails: tuple[_GuardrailText, ...] = Field(
+        min_length=len(BASE_GUARDRAILS), max_length=_MAX_GUARDRAILS
+    )
 
     @field_validator("guardrails", mode="before")
     @classmethod

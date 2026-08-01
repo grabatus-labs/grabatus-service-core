@@ -129,3 +129,12 @@ def test_persona_rejects_empty_pains() -> None:
 def test_workflow_step_rejects_zero_order() -> None:
     with pytest.raises(ValidationError):
         WorkflowStep(order=0, what_the_user_does="a", what_the_llm_should_say="b")
+
+
+@pytest.mark.parametrize("bullet_field", ["when_to_use", "when_not_to_use", "limitations"])
+def test_bullet_lists_reject_an_oversized_single_item(bullet_field: str) -> None:
+    """A tuple's own max_length bounds item *count*, never item *length* —
+    without a per-item bound, a single huge string validates as "one
+    bullet" and raw data enters the readout through this side door."""
+    with pytest.raises(ValidationError):
+        _knowledge(**{bullet_field: ("x" * 2_000_000,)})

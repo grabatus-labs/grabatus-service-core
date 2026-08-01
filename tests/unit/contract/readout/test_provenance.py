@@ -102,3 +102,15 @@ def test_input_digests_cannot_be_empty() -> None:
 def test_input_digests_cannot_be_omitted() -> None:
     with pytest.raises(ValidationError):
         _reproducibility_missing("input_digests")
+
+
+def test_library_versions_reject_an_oversized_value() -> None:
+    """dict[str, str] has no inherent length bound -- a megabyte-scale
+    "version" string would otherwise validate as one dict entry."""
+    with pytest.raises(ValidationError):
+        _reproducibility(library_versions={"mlxtend": "x" * 2_000_000})
+
+
+def test_library_versions_reject_an_oversized_key() -> None:
+    with pytest.raises(ValidationError):
+        _reproducibility(library_versions={"x" * 2_000_000: "0.23.1"})

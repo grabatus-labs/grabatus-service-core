@@ -40,6 +40,7 @@
         },
         "uri": {
           "format": "uri",
+          "maxLength": 2048,
           "minLength": 1,
           "title": "Uri",
           "type": "string"
@@ -156,6 +157,7 @@
         "filters_applied": {
           "default": [],
           "items": {
+            "maxLength": 300,
             "type": "string"
           },
           "maxItems": 30,
@@ -171,6 +173,7 @@
         "known_gaps": {
           "default": [],
           "items": {
+            "maxLength": 300,
             "type": "string"
           },
           "maxItems": 30,
@@ -196,6 +199,7 @@
         "quality_flags": {
           "default": [],
           "items": {
+            "maxLength": 300,
             "type": "string"
           },
           "maxItems": 30,
@@ -292,6 +296,7 @@
         },
         "guardrails": {
           "items": {
+            "maxLength": 500,
             "type": "string"
           },
           "maxItems": 20,
@@ -301,6 +306,7 @@
         },
         "must_not_claim": {
           "items": {
+            "maxLength": 500,
             "type": "string"
           },
           "maxItems": 20,
@@ -311,6 +317,7 @@
         "recommended_narrative_order": {
           "default": [],
           "items": {
+            "maxLength": 64,
             "type": "string"
           },
           "maxItems": 20,
@@ -666,6 +673,7 @@
                 "type": "number"
               },
               {
+                "maxLength": 300,
                 "type": "string"
               },
               {
@@ -674,11 +682,15 @@
             ]
           },
           "maxProperties": 50,
+          "propertyNames": {
+            "maxLength": 120
+          },
           "title": "Hyperparameters",
           "type": "object"
         },
         "not_designed_for": {
           "items": {
+            "maxLength": 300,
             "type": "string"
           },
           "maxItems": 30,
@@ -864,13 +876,13 @@
             "web",
             "api",
             "mcp",
-            "batch"
+            "internal"
           ],
           "title": "Origin",
           "type": "string"
         },
         "parameter_id": {
-          "maxLength": 64,
+          "maxLength": 128,
           "minLength": 1,
           "title": "Parameter Id",
           "type": "string"
@@ -882,7 +894,7 @@
           "type": "string"
         },
         "result_id": {
-          "maxLength": 64,
+          "maxLength": 128,
           "minLength": 1,
           "title": "Result Id",
           "type": "string"
@@ -890,7 +902,7 @@
         "tenant_id": {
           "maxLength": 64,
           "minLength": 1,
-          "pattern": "^[a-z][a-z0-9-]*$",
+          "pattern": "^[a-z0-9-]+$",
           "title": "Tenant Id",
           "type": "string"
         }
@@ -912,7 +924,7 @@
         "name": {
           "maxLength": 64,
           "minLength": 1,
-          "pattern": "^[a-z][a-z0-9-]*$",
+          "pattern": "^[a-z][a-z0-9_-]*$",
           "title": "Name",
           "type": "string"
         },
@@ -949,10 +961,14 @@
         },
         "library_versions": {
           "additionalProperties": {
+            "maxLength": 64,
             "type": "string"
           },
           "maxProperties": 20,
           "minProperties": 1,
+          "propertyNames": {
+            "maxLength": 120
+          },
           "title": "Library Versions",
           "type": "object"
         },
@@ -1019,6 +1035,7 @@
         },
         "limitations": {
           "items": {
+            "maxLength": 300,
             "type": "string"
           },
           "maxItems": 30,
@@ -1055,6 +1072,7 @@
         },
         "when_not_to_use": {
           "items": {
+            "maxLength": 300,
             "type": "string"
           },
           "maxItems": 30,
@@ -1064,6 +1082,7 @@
         },
         "when_to_use": {
           "items": {
+            "maxLength": 300,
             "type": "string"
           },
           "maxItems": 30,

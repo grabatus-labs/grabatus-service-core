@@ -340,15 +340,15 @@ any particular run.
 | `one_liner`               | string, 1–280 chars                       | yes      | One sentence: what the service does.                        |
 | `what_it_does`            | string, 1–2000 chars                      | yes      | Full description of the service's behaviour.                 |
 | `problem_solved`          | string, 1–1000 chars                      | yes      | The business problem the service exists to fix.              |
-| `when_to_use`             | tuple of string, 1–30 items                | yes      | Situations where this service is the right tool.              |
-| `when_not_to_use`         | tuple of string, 1–30 items                | yes      | Situations where it is not — including "use X instead" cases. |
+| `when_to_use`             | tuple of string, 1–30 items, each ≤300 chars | yes    | Situations where this service is the right tool.              |
+| `when_not_to_use`         | tuple of string, 1–30 items, each ≤300 chars | yes    | Situations where it is not — including "use X instead" cases. |
 | `personas`                | tuple of `Persona`, 1–30 items             | yes      | Who uses the service (role) and their pains.                   |
 | `workflow`                | tuple of `WorkflowStep`, 1–12 items         | yes      | Ordered steps of using the service; `order` values must be contiguous starting at 1. |
 | `input_requirements`      | tuple of `InputRequirement`, 1–64 items     | yes      | Each column the service reads, in business terms, with an example. |
 | `interpretation_playbook` | tuple of `InterpretationRule`, 1–30 items   | yes      | Situation → meaning → recommendation triples.                  |
 | `common_misreadings`      | tuple of `Misreading`, 0–30 items           | no       | Wrong readings seen in the field, paired with the correction.   |
 | `glossary`                | tuple of `Term`, 1–30 items                 | yes      | Technical terms mapped to client-facing language.               |
-| `limitations`             | tuple of string, 1–30 items                 | yes      | What the service cannot do, stated plainly.                     |
+| `limitations`             | tuple of string, 1–30 items, each ≤300 chars | yes     | What the service cannot do, stated plainly.                     |
 
 #### `service_knowledge` nested types
 
@@ -408,9 +408,9 @@ any particular run.
 | `objective`          | string                                | yes      | `min_length=1`, `max_length=1000`                    | What the model was fit to do.                           |
 | `formulation`        | string \| null                        | no       | default `null`, `max_length=500`                     | Optional formula or equation summary.                   |
 | `assumptions`        | tuple of `Assumption`                 | yes      | `min_length=1`, `max_length=30`                      | Stated assumptions, each with its violation impact.     |
-| `hyperparameters`    | dict[string, scalar\|null]            | yes      | `max_length=50` (dict length)                        | Hyperparameter name → strict scalar (`bool`/`int`/`float`/`str`/`None` only — no other collection, and no cross-type coercion). |
+| `hyperparameters`    | dict[string, scalar\|null]            | yes      | `max_length=50` (dict length); key ≤120 chars; string values ≤300 chars | Hyperparameter name → strict scalar (`bool`/`int`/`float`/`str`/`None` only — no other collection, no cross-type coercion, and no unbounded string). |
 | `priors`             | tuple of `Prior`                      | no       | default `()`, `max_length=30`                        | Prior distributions used, when the paradigm is Bayesian. |
-| `not_designed_for`   | tuple of string                       | yes      | `min_length=1`, `max_length=30`                      | What the model cannot answer.                           |
+| `not_designed_for`   | tuple of string                       | yes      | `min_length=1`, `max_length=30`, each ≤300 chars     | What the model cannot answer.                           |
 
 **`Assumption`**
 
@@ -436,9 +436,9 @@ any particular run.
 | `granularity`          | string                     | yes      | `min_length=1`, `max_length=64`      | Grain of one observation, e.g. `"transaction"`.          |
 | `period_covered`       | `PeriodCovered` \| null    | no       | default `null`                        | Inclusive date range covered, if applicable.             |
 | `entities`             | tuple of `EntitySummary`   | yes      | `min_length=1`, `max_length=30`      | Counts of distinct entities analysed.                    |
-| `filters_applied`      | tuple of string            | no       | default `()`, `max_length=30`        | What the service removed on purpose.                     |
-| `known_gaps`           | tuple of string            | no       | default `()`, `max_length=30`        | What was missing at the source.                          |
-| `quality_flags`        | tuple of string            | no       | default `()`, `max_length=30`        | What the service had to assume in order to run at all.   |
+| `filters_applied`      | tuple of string            | no       | default `()`, `max_length=30`, each ≤300 chars | What the service removed on purpose.                     |
+| `known_gaps`           | tuple of string            | no       | default `()`, `max_length=30`, each ≤300 chars | What was missing at the source.                          |
+| `quality_flags`        | tuple of string            | no       | default `()`, `max_length=30`, each ≤300 chars | What the service had to assume in order to run at all.   |
 
 **`PeriodCovered`**
 
@@ -459,7 +459,7 @@ any particular run.
 | Field          | Type                          | Required | Constraints                                       | Meaning                                                  |
 | --------------- | ------------------------------ | -------- | ------------------------------------------------------ | --------------------------------------------------------------- |
 | `role`           | string                          | yes      | `min_length=1`, `max_length=32`, pattern `^[a-z][a-z0-9_]*$` | Matches an output role declared in the envelope's `outputs[]`. |
-| `uri`            | URL                             | yes      | valid `AnyUrl`                                          | Where the artefact was written.                                  |
+| `uri`            | URL                             | yes      | valid `AnyUrl`, `max_length=2048`, scheme one of `gs`, `bigquery`, `secret` | Where the artefact was written. `data:` and `inline://` are rejected — both embed their payload directly in the URI, which would let raw data back into a document that carries none. |
 | `format`         | literal                         | yes      | one of `xlsx`, `csv`, `json`, `parquet`, `bigquery`, `inline` | Artefact file format.                                     |
 | `description`    | string                          | yes      | `min_length=1`, `max_length=500`                        | What this artefact is.                                          |
 | `fields`         | tuple of `FieldDescription`     | yes      | `min_length=1`, `max_length=100`                        | Data dictionary for the artefact's columns.                      |
@@ -562,9 +562,9 @@ validation time:
 | `audience`                        | string            | yes      | `min_length=1`, `max_length=200`                                                 | Who the narration is written for.                                       |
 | `summary_for_llm`                 | string            | yes      | `min_length=1`, `max_length=2000`                                                | The summary the presenting LLM should base its narration on.            |
 | `what_was_solved`                 | string            | yes      | `min_length=1`, `max_length=1000`                                                | The problem this run solved.                                            |
-| `recommended_narrative_order`     | tuple of string   | no       | default `()`, `max_length=20`                                                    | Suggested order to narrate findings in (typically finding `id`s).       |
-| `must_not_claim`                  | tuple of string   | yes      | `min_length=1`, `max_length=20`                                                  | Claims the presenting LLM must never make about this result.            |
-| `guardrails`                      | tuple of string   | yes      | `min_length=4` (`len(BASE_GUARDRAILS)`), `max_length=20`; first 4 elements must equal `BASE_GUARDRAILS` verbatim, in order | Narration rules — see "The base guardrails" below for the mandatory prefix. |
+| `recommended_narrative_order`     | tuple of string   | no       | default `()`, `max_length=20`, each ≤64 chars (matches `Finding.id`'s own bound)  | Suggested order to narrate findings in (typically finding `id`s).       |
+| `must_not_claim`                  | tuple of string   | yes      | `min_length=1`, `max_length=20`, each ≤500 chars                                 | Claims the presenting LLM must never make about this result.            |
+| `guardrails`                      | tuple of string   | yes      | `min_length=4` (`len(BASE_GUARDRAILS)`), `max_length=20`, each ≤500 chars; first 4 elements must equal `BASE_GUARDRAILS` verbatim, in order | Narration rules — see "The base guardrails" below for the mandatory prefix. |
 
 ### `reproducibility` fields (`Reproducibility`)
 
@@ -573,7 +573,7 @@ validation time:
 | `random_seed`                | integer \| null           | no       | default `null`                        | Seed used, if the method is stochastic.                          |
 | `compute_duration_seconds`   | float                     | yes      | `ge=0.0`                              | Wall-clock time of the compute step.                             |
 | `input_digests`              | tuple of `InputDigest`    | yes      | `min_length=1`, `max_length=20`      | Hash of each input, so the same run can be identified later.     |
-| `library_versions`           | dict[string, string]      | yes      | `min_length=1`, `max_length=20` (dict length) | Library name → pinned version used during compute.       |
+| `library_versions`           | dict[string, string]      | yes      | `min_length=1`, `max_length=20` (dict length); key ≤120 chars; value ≤64 chars | Library name → pinned version used during compute.       |
 
 **`InputDigest`**
 

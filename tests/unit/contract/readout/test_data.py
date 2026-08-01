@@ -66,3 +66,12 @@ def test_provenance_is_frozen() -> None:
     provenance = _provenance()
     with pytest.raises(ValidationError):
         provenance.observation_count = 1  # type: ignore[misc]
+
+
+@pytest.mark.parametrize("note_field", ["filters_applied", "known_gaps", "quality_flags"])
+def test_note_lists_reject_an_oversized_single_item(note_field: str) -> None:
+    """A tuple's own max_length bounds item *count*, never item *length* —
+    without a per-item bound, a single ~1.9 MB string validates as "one
+    note" and raw data enters the readout through this side door."""
+    with pytest.raises(ValidationError):
+        _provenance(**{note_field: ("x" * 2_000_000,)})

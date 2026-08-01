@@ -113,3 +113,22 @@ def test_guide_is_frozen() -> None:
     guide = _guide()
     with pytest.raises(ValidationError):
         guide.audience = "outro"  # type: ignore[misc]
+
+
+def test_must_not_claim_rejects_an_oversized_single_item() -> None:
+    """A tuple's own max_length bounds item *count*, never item *length*."""
+    with pytest.raises(ValidationError):
+        _guide(must_not_claim=("x" * 2_000_000,))
+
+
+def test_recommended_narrative_order_rejects_an_oversized_single_item() -> None:
+    """Steps are meant to be Finding.id values (<=64 chars) -- not a payload."""
+    with pytest.raises(ValidationError):
+        _guide(recommended_narrative_order=("x" * 2_000_000,))
+
+
+def test_guardrails_reject_an_oversized_appended_item() -> None:
+    """Even past the mandatory base prefix, an appended guardrail is still
+    bounded -- otherwise a service could smuggle raw data as a "guardrail"."""
+    with pytest.raises(ValidationError):
+        _guide(guardrails=(*BASE_GUARDRAILS, "x" * 2_000_000))

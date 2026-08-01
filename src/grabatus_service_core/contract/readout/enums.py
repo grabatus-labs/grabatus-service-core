@@ -24,6 +24,12 @@ READOUT_VERSION: Final = "1.0"
 # here rather than duplicated per module.
 MAX_ITEMS: Final[int] = 30
 
+# Bounds a single string item inside a `tuple[str, ...]` field. Every note
+# list across the readout (data.py's three provenance notes, knowledge.py's
+# usage/limitation bullets, model.py's not_designed_for) is the same shape
+# of content: one short, human-written line — never a place for raw data.
+ITEM_MAX_LENGTH: Final[int] = 300
+
 ModelFamily = Literal[
     "time_series_forecast",
     "bayesian_inference",

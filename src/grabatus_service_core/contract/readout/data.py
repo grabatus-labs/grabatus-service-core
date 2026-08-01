@@ -11,13 +11,18 @@ needs to know to judge the number.
 from __future__ import annotations
 
 from datetime import date
-from typing import Self
+from typing import Annotated, Self
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
-from grabatus_service_core.contract.readout.enums import MAX_ITEMS
+from grabatus_service_core.contract.readout.enums import ITEM_MAX_LENGTH, MAX_ITEMS
 
 _FROZEN = ConfigDict(extra="forbid", frozen=True)
+
+# Each note is one short, human-written line — not a place to smuggle a
+# 1.9 MB payload as a single tuple item (the tuple's own max_length bounds
+# item *count*, not item *length*).
+_Note = Annotated[str, StringConstraints(max_length=ITEM_MAX_LENGTH)]
 
 
 class PeriodCovered(BaseModel):
@@ -53,6 +58,6 @@ class DataProvenance(BaseModel):
     granularity: str = Field(min_length=1, max_length=64)
     period_covered: PeriodCovered | None = None
     entities: tuple[EntitySummary, ...] = Field(min_length=1, max_length=MAX_ITEMS)
-    filters_applied: tuple[str, ...] = Field(default=(), max_length=MAX_ITEMS)
-    known_gaps: tuple[str, ...] = Field(default=(), max_length=MAX_ITEMS)
-    quality_flags: tuple[str, ...] = Field(default=(), max_length=MAX_ITEMS)
+    filters_applied: tuple[_Note, ...] = Field(default=(), max_length=MAX_ITEMS)
+    known_gaps: tuple[_Note, ...] = Field(default=(), max_length=MAX_ITEMS)
+    quality_flags: tuple[_Note, ...] = Field(default=(), max_length=MAX_ITEMS)

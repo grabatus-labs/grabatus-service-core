@@ -125,3 +125,21 @@ def test_model_is_frozen() -> None:
 def test_prior_requires_rationale() -> None:
     with pytest.raises(ValidationError):
         Prior(parameter="alpha", distribution="Beta(1,1)", rationale="")
+
+
+def test_not_designed_for_rejects_an_oversized_single_item() -> None:
+    """A tuple's own max_length bounds item *count*, never item *length*."""
+    with pytest.raises(ValidationError):
+        _model(not_designed_for=("x" * 2_000_000,))
+
+
+def test_hyperparameters_reject_an_oversized_string_value() -> None:
+    """StrictStr alone has no length bound -- a megabyte-scale string like
+    a serialized posterior sample would otherwise validate as one scalar."""
+    with pytest.raises(ValidationError):
+        _model(hyperparameters={"posterior_samples": "x" * 2_000_000})
+
+
+def test_hyperparameters_reject_an_oversized_key() -> None:
+    with pytest.raises(ValidationError):
+        _model(hyperparameters={"x" * 200: 1})
