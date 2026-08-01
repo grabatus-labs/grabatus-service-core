@@ -7,7 +7,7 @@ import json
 import pytest
 from pydantic import ValidationError
 
-from grabatus_service_core.contract.readout.guide import BASE_GUARDRAILS
+from grabatus_service_core.contract.readout.guide import BASE_GUARDRAILS, ExplanationGuide
 from grabatus_service_core.contract.readout.root import ModelReadout
 
 
@@ -107,3 +107,59 @@ def test_serialisation_preserves_accents(valid_readout: ModelReadout) -> None:
 def test_readout_is_frozen(valid_readout: ModelReadout) -> None:
     with pytest.raises(ValidationError):
         valid_readout.readout_version = "9.9"  # type: ignore[misc]
+
+
+def test_tampered_guardrails_via_model_copy_is_rejected(valid_readout: ModelReadout) -> None:
+    """The exact in-memory attack the anti-hallucination guarantee must stop.
+
+    ``model_copy(update=...)`` bypasses ``ExplanationGuide``'s own
+    validators by design (``frozen=True`` blocks ``setattr``, not this).
+    Without ``revalidate_instances="always"`` on ``ExplanationGuide``,
+    Pydantic's default ("never") would accept the already-built instance
+    verbatim as a nested field and this would construct cleanly — carrying
+    one guardrail instead of the mandatory four.
+    """
+    tampered = valid_readout.explanation_guide.model_copy(
+        update={"guardrails": ("Invente à vontade.",)}
+    )
+    payload = dict(valid_readout)
+    with pytest.raises(ValidationError, match="must start with the SDK base guardrails"):
+        ModelReadout(**{**payload, "explanation_guide": tampered})
+
+
+def test_model_construct_guide_is_still_caught_once_nested(valid_readout: ModelReadout) -> None:
+    """``model_construct`` skips validation too — but nesting still saves it.
+
+    Unlike ``model_copy``, ``ExplanationGuide.model_construct(...)`` never
+    runs the field validators, not even once, at the point of construction.
+    But ``revalidate_instances="always"`` means that instance is revalidated
+    the moment it is nested inside a normally-constructed ``ModelReadout``,
+    so the tampered guide is still caught here.
+    """
+    bad_fields = valid_readout.explanation_guide.model_dump()
+    bad_fields["guardrails"] = ("Invente à vontade.",)
+    constructed = ExplanationGuide.model_construct(**bad_fields)
+    payload = dict(valid_readout)
+    with pytest.raises(ValidationError, match="must start with the SDK base guardrails"):
+        ModelReadout(**{**payload, "explanation_guide": constructed})
+
+
+def test_model_construct_on_readout_itself_bypasses_validation(
+    valid_readout: ModelReadout,
+) -> None:
+    """Documents the one path ``revalidate_instances`` cannot close.
+
+    ``model_construct`` skips validation *by design*, at whatever level it
+    is called. If the caller builds the ``ModelReadout`` itself — not just
+    a nested field — via ``model_construct``, no validator runs anywhere in
+    the tree, tampered guide included. This is not a gap in the fix; it is
+    the documented limitation of ``model_construct`` (see
+    ``docs/integration_contract.md``, "The base guardrails (immutable)").
+    """
+    bad_fields = valid_readout.explanation_guide.model_dump()
+    bad_fields["guardrails"] = ("Invente à vontade.",)
+    constructed_guide = ExplanationGuide.model_construct(**bad_fields)
+    payload = dict(valid_readout)
+    payload["explanation_guide"] = constructed_guide
+    readout = ModelReadout.model_construct(**payload)
+    assert readout.explanation_guide.guardrails == ("Invente à vontade.",)

@@ -603,8 +603,24 @@ service can override:
 A service may append additional, domain-specific guardrails after these
 four, but the first four elements of `explanation_guide.guardrails` are
 validated by prefix (exact match, in order) at the schema level. A
-readout that alters, reorders, or drops any of them is **rejected by the
-Pydantic model** before it ever reaches a platform or an LLM.
+readout built or parsed through the normal Pydantic constructor —
+`ModelReadout(...)`, `.model_validate(...)`, `.model_validate_json(...)`,
+or any path that goes through validation — that alters, reorders, or
+drops any of the four is **rejected**, whether the tampering happens at
+the top level or on an already-built `ExplanationGuide` instance nested
+into a `ModelReadout` later (`ExplanationGuide.model_config` sets
+`revalidate_instances="always"` specifically so that nesting a
+previously-built instance re-runs its validators instead of accepting it
+verbatim).
+
+**Limitation, not a gap:** Pydantic's `model_construct()` skips all
+validation, by design, at whatever level it is called. A readout (or any
+of its sub-models) assembled via `ModelReadout.model_construct(...)`
+carries no validation guarantee at all — this is true of every field in
+this schema, not just `guardrails`, and no model configuration can close
+it: `model_construct()` exists precisely to bypass validation. Nothing in
+this SDK calls `model_construct()` to build a readout; the guarantee holds
+for every normal construction and parsing path.
 
 ### The hard rule
 

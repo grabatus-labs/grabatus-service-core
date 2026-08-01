@@ -33,7 +33,14 @@ _MAX_NARRATIVE_STEPS = 20
 class ExplanationGuide(BaseModel):
     """Narration instructions for whichever LLM presents this result."""
 
-    model_config = ConfigDict(extra="forbid", frozen=True)
+    # revalidate_instances="always": the default ("never") lets an already
+    # constructed instance be accepted verbatim as a nested field value —
+    # so `guide.model_copy(update={"guardrails": (...)})` (which skips
+    # validation by design) could smuggle a tampered guardrails tuple into
+    # a ModelReadout untouched. Setting this here, on the nested model
+    # itself, is what closes it: the setting that matters is the one on
+    # the model *being nested*, not on the parent that holds it.
+    model_config = ConfigDict(extra="forbid", frozen=True, revalidate_instances="always")
 
     audience: str = Field(min_length=1, max_length=200)
     summary_for_llm: str = Field(min_length=1, max_length=2000)
