@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+
 import pytest
 from pydantic import ValidationError
 
@@ -58,17 +60,60 @@ def test_unknown_family_is_rejected() -> None:
         _model(family="deep_learning")
 
 
-def test_hyperparameters_reject_collections() -> None:
-    """A nested array here would be raw data smuggled into the readout."""
+@pytest.mark.parametrize(
+    "invalid_value",
+    [
+        pytest.param([1, 2, 3], id="list"),
+        pytest.param({"nested": 1}, id="nested_dict"),
+        pytest.param((1, 2, 3), id="tuple"),
+    ],
+)
+def test_hyperparameters_reject_collections(invalid_value: object) -> None:
+    """Any collection here would be raw data smuggled into the readout."""
     with pytest.raises(ValidationError):
-        _model(hyperparameters={"samples": [1, 2, 3]})
+        _model(hyperparameters={"samples": invalid_value})
 
 
 def test_hyperparameters_accept_bool_int_float_str_and_none() -> None:
+    """Exact type must survive validation: True must not become 1, nor 1 become 1.0."""
     model = _model(
         hyperparameters={"level": "both", "top_n": 20, "rate": 0.1, "flag": True, "window": None}
     )
-    assert model.hyperparameters["top_n"] == 20
+    assert type(model.hyperparameters["level"]) is str
+    assert type(model.hyperparameters["top_n"]) is int
+    assert type(model.hyperparameters["rate"]) is float
+    assert type(model.hyperparameters["flag"]) is bool
+    assert model.hyperparameters["window"] is None
+
+
+def _model_json_payload(hyperparameters: dict[str, object]) -> str:
+    payload = {
+        "display_name": "Regras de associação por FP-Growth",
+        "family": "association_rules",
+        "paradigm": "heuristic",
+        "objective": "Encontrar produtos comprados juntos mais que o acaso.",
+        "formulation": None,
+        "assumptions": [
+            {
+                "statement": "Cada transaction_id representa uma cesta única.",
+                "violation_impact": "Cestas fragmentadas inflam o suporte artificialmente.",
+                "checked": True,
+            }
+        ],
+        "hyperparameters": hyperparameters,
+        "priors": [],
+        "not_designed_for": ["inferir causalidade entre os itens da regra"],
+    }
+    return json.dumps(payload)
+
+
+def test_hyperparameters_survive_json_round_trip() -> None:
+    """The Django platform sends JSON; types must arrive faithful on the other side."""
+    raw = _model_json_payload({"min_support": 0.005, "top_n": 20, "level": "both"})
+    model = ModelDescription.model_validate_json(raw)
+    assert type(model.hyperparameters["min_support"]) is float
+    assert type(model.hyperparameters["top_n"]) is int
+    assert type(model.hyperparameters["level"]) is str
 
 
 def test_model_is_frozen() -> None:
