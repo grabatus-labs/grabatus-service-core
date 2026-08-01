@@ -81,6 +81,36 @@ def test_read_as_is_mandatory() -> None:
         _field(read_as="")
 
 
+def test_meaning_is_mandatory() -> None:
+    """`meaning` is technical; `read_as` is the sentence the client hears."""
+    with pytest.raises(ValidationError):
+        _field(meaning="")
+
+
+@pytest.mark.parametrize("required_field", ["meaning", "read_as"])
+def test_required_text_fields_cannot_be_omitted(required_field: str) -> None:
+    """Proves absence of the key, not just an empty string.
+
+    ``_field()`` always supplies both keys, so a default value smuggled in
+    via ``Field(default="", ...)`` would slip past every other test here —
+    the empty-string checks above validate a value that is present, and
+    Pydantic v2 does not revalidate a default when the key is missing. This
+    builds the payload directly, without the key, and goes through the
+    model to prove the field cannot simply be dropped.
+    """
+    payload: dict[str, object] = {
+        "name": "lift",
+        "type": "number",
+        "unit": None,
+        "interval_level": None,
+        "meaning": "Razão entre a frequência conjunta observada e a esperada sob independência.",
+        "read_as": "Quantas vezes mais provável que o acaso.",
+    }
+    del payload[required_field]
+    with pytest.raises(ValidationError):
+        FieldDescription.model_validate(payload)
+
+
 def test_artifact_is_frozen() -> None:
     artifact = _artifact()
     with pytest.raises(ValidationError):
