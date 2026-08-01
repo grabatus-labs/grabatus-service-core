@@ -11,6 +11,7 @@ from grabatus_service_core.contract.readout.artifacts import ArtifactDescription
 from grabatus_service_core.contract.readout.caveats import Caveat
 from grabatus_service_core.contract.readout.data import DataProvenance
 from grabatus_service_core.contract.readout.diagnostics import Diagnostic, OverallQuality
+from grabatus_service_core.contract.readout.enums import READOUT_VERSION
 from grabatus_service_core.contract.readout.findings import Finding
 from grabatus_service_core.contract.readout.guide import ExplanationGuide
 from grabatus_service_core.contract.readout.knowledge import ServiceKnowledge
@@ -63,7 +64,7 @@ class ModelReadout(BaseModel):
 
     model_config = _FROZEN
 
-    readout_version: Literal["1.0"] = "1.0"
+    readout_version: Literal["1.0"] = READOUT_VERSION
     generated_at: datetime
 
     request: ReadoutRequest

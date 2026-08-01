@@ -12,7 +12,13 @@ from grabatus_service_core.contract.io_spec import ROLE_PATTERN
 __all__ = ["ROLE_PATTERN"]
 
 READOUT_OUTPUT_ROLE: Final[str] = "model_readout"
-READOUT_VERSION: Final[str] = "1.0"
+
+# No `Final[str]` here on purpose: an explicit `str` annotation would widen
+# the constant and make `readout_version: Literal["1.0"] = READOUT_VERSION`
+# in root.py fail mypy --strict (Literal["1.0"] cannot default to a bare
+# str). Leaving the annotation off lets mypy infer the narrower
+# Literal["1.0"] from the string literal on the right-hand side.
+READOUT_VERSION: Final = "1.0"
 
 # Shared by every readout model that bounds a collection. Defined once
 # here rather than duplicated per module.
