@@ -138,17 +138,35 @@ URIs in `inputs[].source_uri` and `outputs[].destination_uri` must satisfy:
 - The default authorization policy (`TenantPrefixPolicy`) checks the
   **bucket name**, not the path, against the tenant: the bucket must
   start with `<bucket_prefix>-<tenant_id>` (`bucket_prefix` is a
-  per-deployment constant, e.g. `gbt-storage`). With
-  `require_user_path_segment=True` — the default — the URI's first path
-  segment must additionally equal `user_<user_id>`. Concretely, for
-  `tenant_id=grabatus`, `user_id=999`, `bucket_prefix=gbt-storage`:
-  - `gs://gbt-storage-grabatus/user_999/data.xlsx` ✓
-  - `gs://gbt-storage-another-tenant/user_999/data.xlsx` ✗ — bucket does
-    not start with the expected `<bucket_prefix>-<tenant_id>` prefix,
-    rejected with `UnauthorizedUriError`.
-  - `gs://gbt-storage-grabatus/data.xlsx` ✗ — missing the required
-    `user_<user_id>` first path segment, rejected with
-    `UnauthorizedUriError`.
+  per-deployment constant, e.g. `gbt-storage`). This check always runs,
+  regardless of configuration.
+- Whether the **path** is checked at all depends on the deployment's
+  `require_user_path_segment` flag (`TenantPrefixPolicy`
+  constructor argument, `security/tenant_prefix_policy.py`):
+  - **`True` — the default.** In addition to the bucket check above, the
+    URI's first path segment must equal `user_<user_id>`. Concretely,
+    for `tenant_id=grabatus`, `user_id=999`, `bucket_prefix=gbt-storage`:
+    - `gs://gbt-storage-grabatus/user_999/data.xlsx` ✓
+    - `gs://gbt-storage-another-tenant/user_999/data.xlsx` ✗ — bucket
+      does not start with the expected `<bucket_prefix>-<tenant_id>`
+      prefix, rejected with `UnauthorizedUriError`.
+    - `gs://gbt-storage-grabatus/data.xlsx` ✗ — missing the required
+      `user_<user_id>` first path segment, rejected with
+      `UnauthorizedUriError`.
+  - **`False`.** The path is not inspected at all — `_check_user_segment`
+    is skipped entirely. Only the bucket-prefix rule above applies, so
+    any path under a correctly-prefixed bucket is authorized:
+    - `gs://gbt-storage-grabatus/data.xlsx` ✓ — no user segment
+      required.
+    - `gs://gbt-storage-grabatus/anything/at/all.xlsx` ✓ — same reason.
+    - `gs://gbt-storage-another-tenant/data.xlsx` ✗ — the bucket-prefix
+      check still applies and still rejects with `UnauthorizedUriError`.
+  A deployment that sets `require_user_path_segment=False` is trading
+  away per-user isolation within a tenant's bucket — it still enforces
+  tenant isolation, but not user isolation inside it. Same rule applies,
+  mutatis mutandis, to `bigquery://` URIs via `_check_bigquery_uri`: only
+  the project segment's prefix is checked, and there is no path-level
+  concept to toggle for that scheme.
 
 ---
 
@@ -289,6 +307,28 @@ sub-models).
 | `explanation_guide` | `ExplanationGuide`                 | yes      | Narration instructions for whichever LLM presents the result — audience, summary, guardrails. |
 | `reproducibility`   | `Reproducibility`                  | yes      | Seed, compute duration, input hashes, and library versions needed to reproduce the run. |
 
+The following sections give the field-level detail for every submodel
+named above, in the same order. Nothing here is inferred from the
+example JSON below — each table is transcribed from the Pydantic model
+that owns it.
+
+### `request` fields (`ReadoutRequest`)
+
+| Field          | Type    | Required | Constraints                                    | Meaning                                              |
+| -------------- | ------- | -------- | ----------------------------------------------- | ------------------------------------------------------ |
+| `request_id`   | string  | yes      | `min_length=1`, `max_length=64`                  | Correlates the readout to the platform request that produced it. |
+| `result_id`    | string  | yes      | `min_length=1`, `max_length=64`                  | Opaque platform id of the result record.                |
+| `parameter_id` | string  | yes      | `min_length=1`, `max_length=64`                  | Opaque platform id of the parameter set used.           |
+| `tenant_id`    | string  | yes      | `min_length=1`, `max_length=64`, pattern `^[a-z][a-z0-9-]*$` | Tenant that owns this readout.        |
+| `origin`       | literal | yes      | one of `"web"`, `"api"`, `"mcp"`, `"batch"`       | Where the originating request came from.                |
+
+### `service` fields (`ReadoutService`)
+
+| Field     | Type   | Required | Constraints                                          | Meaning                                        |
+| --------- | ------ | -------- | ------------------------------------------------------ | ------------------------------------------------- |
+| `name`    | string | yes      | `min_length=1`, `max_length=64`, pattern `^[a-z][a-z0-9-]*$` | Service slug, e.g. `grabatus-basketanalysis`. |
+| `version` | string | yes      | pattern `^\d+\.\d+\.\d+$` (strict semver)                | Service version that produced this readout.     |
+
 ### `service_knowledge` fields
 
 This is the block the platform will lean on most for service discovery —
@@ -309,6 +349,238 @@ any particular run.
 | `common_misreadings`      | tuple of `Misreading`, 0–30 items           | no       | Wrong readings seen in the field, paired with the correction.   |
 | `glossary`                | tuple of `Term`, 1–30 items                 | yes      | Technical terms mapped to client-facing language.               |
 | `limitations`             | tuple of string, 1–30 items                 | yes      | What the service cannot do, stated plainly.                     |
+
+#### `service_knowledge` nested types
+
+**`Persona`**
+
+| Field   | Type              | Required | Constraints                       | Meaning                          |
+| ------- | ----------------- | -------- | ------------------------------------ | ------------------------------------ |
+| `role`  | string             | yes      | `min_length=1`, `max_length=200`     | Who uses the service.               |
+| `pains` | tuple of string    | yes      | `min_length=1`, `max_length=30`      | What hurts today for this persona.  |
+
+**`WorkflowStep`**
+
+| Field                      | Type    | Required | Constraints                    | Meaning                                        |
+| --------------------------- | ------- | -------- | --------------------------------- | -------------------------------------------------- |
+| `order`                      | integer | yes      | `ge=1`, `le=12`                   | Position in the workflow; contiguous from 1 across all steps (enforced across the whole `workflow` tuple, not per-item). |
+| `what_the_user_does`         | string  | yes      | `min_length=1`, `max_length=500`  | The user's action at this step.                    |
+| `what_the_llm_should_say`    | string  | yes      | `min_length=1`, `max_length=1000` | What the LLM should say at this point.             |
+
+**`InputRequirement`**
+
+| Field               | Type    | Required | Constraints                       | Meaning                             |
+| -------------------- | ------- | -------- | ------------------------------------ | ---------------------------------------- |
+| `column`             | string  | yes      | `min_length=1`, `max_length=64`      | Name of the column the service reads.    |
+| `required`           | boolean | yes      | —                                     | Whether the column is mandatory.          |
+| `business_meaning`   | string  | yes      | `min_length=1`, `max_length=500`     | What the column means in business terms. |
+| `example`            | string  | yes      | `min_length=1`, `max_length=200`     | Example value.                            |
+
+**`InterpretationRule`**
+
+| Field                 | Type   | Required | Constraints                      | Meaning                                    |
+| ---------------------- | ------ | -------- | ------------------------------------ | ----------------------------------------------- |
+| `observed_situation`   | string | yes      | `min_length=1`, `max_length=300`     | The situation observed in the result.           |
+| `what_it_means`        | string | yes      | `min_length=1`, `max_length=500`     | What that situation means.                      |
+| `what_to_recommend`    | string | yes      | `min_length=1`, `max_length=500`     | What to recommend given that meaning.           |
+
+**`Misreading`**
+
+| Field            | Type   | Required | Constraints                   | Meaning                              |
+| ----------------- | ------ | -------- | --------------------------------- | ------------------------------------------ |
+| `wrong_reading`   | string | yes      | `min_length=1`, `max_length=500`  | A wrong reading seen in the field.         |
+| `correction`      | string | yes      | `min_length=1`, `max_length=500`  | The correction.                             |
+
+**`Term`**
+
+| Field              | Type   | Required | Constraints                   | Meaning                          |
+| ------------------- | ------ | -------- | --------------------------------- | ------------------------------------- |
+| `technical_term`    | string | yes      | `min_length=1`, `max_length=120`  | The technical term.                  |
+| `client_language`   | string | yes      | `min_length=1`, `max_length=300`  | How to say it to the client.         |
+
+### `model` fields (`ModelDescription`)
+
+| Field              | Type                                | Required | Constraints                                      | Meaning                                            |
+| ------------------- | ------------------------------------ | -------- | ---------------------------------------------------- | ------------------------------------------------------- |
+| `display_name`       | string                                | yes      | `min_length=1`, `max_length=200`                     | Human-readable model name.                              |
+| `family`             | literal, 10 values                    | yes      | one of `time_series_forecast`, `bayesian_inference`, `ab_test`, `optimization`, `classification`, `regression`, `clustering`, `survival_analysis`, `simulation`, `association_rules` | Broad model family. |
+| `paradigm`           | literal, 6 values                     | yes      | one of `bayesian`, `frequentist`, `optimization`, `heuristic`, `ml_supervised`, `ml_unsupervised` | Statistical/computational paradigm used. |
+| `objective`          | string                                | yes      | `min_length=1`, `max_length=1000`                    | What the model was fit to do.                           |
+| `formulation`        | string \| null                        | no       | default `null`, `max_length=500`                     | Optional formula or equation summary.                   |
+| `assumptions`        | tuple of `Assumption`                 | yes      | `min_length=1`, `max_length=30`                      | Stated assumptions, each with its violation impact.     |
+| `hyperparameters`    | dict[string, scalar\|null]            | yes      | `max_length=50` (dict length)                        | Hyperparameter name → strict scalar (`bool`/`int`/`float`/`str`/`None` only — no other collection, and no cross-type coercion). |
+| `priors`             | tuple of `Prior`                      | no       | default `()`, `max_length=30`                        | Prior distributions used, when the paradigm is Bayesian. |
+| `not_designed_for`   | tuple of string                       | yes      | `min_length=1`, `max_length=30`                      | What the model cannot answer.                           |
+
+**`Assumption`**
+
+| Field               | Type    | Required | Constraints                       | Meaning                                |
+| -------------------- | ------- | -------- | ------------------------------------ | -------------------------------------------- |
+| `statement`           | string  | yes      | `min_length=1`, `max_length=500`     | The assumption, stated.                       |
+| `violation_impact`    | string  | yes      | `min_length=1`, `max_length=500`     | Cost of the assumption being wrong.           |
+| `checked`             | boolean | yes      | —                                     | Whether the assumption was actually verified. |
+
+**`Prior`**
+
+| Field           | Type   | Required | Constraints                       | Meaning                                  |
+| ---------------- | ------ | -------- | ------------------------------------ | ---------------------------------------------- |
+| `parameter`       | string | yes      | `min_length=1`, `max_length=120`     | Which parameter the prior applies to.          |
+| `distribution`    | string | yes      | `min_length=1`, `max_length=200`     | The distribution, e.g. `"Normal(0, 1)"`.       |
+| `rationale`       | string | yes      | `min_length=1`, `max_length=500`     | Why this prior was chosen.                     |
+
+### `data` fields (`DataProvenance`)
+
+| Field                | Type                     | Required | Constraints                       | Meaning                                          |
+| --------------------- | ------------------------- | -------- | ------------------------------------ | ------------------------------------------------------ |
+| `observation_count`    | integer                   | yes      | `gt=0`                               | Number of observations behind the result.               |
+| `granularity`          | string                     | yes      | `min_length=1`, `max_length=64`      | Grain of one observation, e.g. `"transaction"`.          |
+| `period_covered`       | `PeriodCovered` \| null    | no       | default `null`                        | Inclusive date range covered, if applicable.             |
+| `entities`             | tuple of `EntitySummary`   | yes      | `min_length=1`, `max_length=30`      | Counts of distinct entities analysed.                    |
+| `filters_applied`      | tuple of string            | no       | default `()`, `max_length=30`        | What the service removed on purpose.                     |
+| `known_gaps`           | tuple of string            | no       | default `()`, `max_length=30`        | What was missing at the source.                          |
+| `quality_flags`        | tuple of string            | no       | default `()`, `max_length=30`        | What the service had to assume in order to run at all.   |
+
+**`PeriodCovered`**
+
+| Field   | Type | Required | Constraints                              | Meaning              |
+| ------- | ---- | -------- | -------------------------------------------- | ------------------------ |
+| `start`  | date | yes      | —                                              | Inclusive start date.    |
+| `end`    | date | yes      | must not precede `start` (model validator)    | Inclusive end date.      |
+
+**`EntitySummary`**
+
+| Field    | Type    | Required | Constraints                   | Meaning                                     |
+| -------- | ------- | -------- | --------------------------------- | -------------------------------------------------- |
+| `label`   | string  | yes      | `min_length=1`, `max_length=64`  | Kind of entity counted, e.g. `"SKU"`.               |
+| `count`   | integer | yes      | `ge=0`                            | How many distinct entities of that kind.            |
+
+### `artifacts` fields (`ArtifactDescription`)
+
+| Field          | Type                          | Required | Constraints                                       | Meaning                                                  |
+| --------------- | ------------------------------ | -------- | ------------------------------------------------------ | --------------------------------------------------------------- |
+| `role`           | string                          | yes      | `min_length=1`, `max_length=32`, pattern `^[a-z][a-z0-9_]*$` | Matches an output role declared in the envelope's `outputs[]`. |
+| `uri`            | URL                             | yes      | valid `AnyUrl`                                          | Where the artefact was written.                                  |
+| `format`         | literal                         | yes      | one of `xlsx`, `csv`, `json`, `parquet`, `bigquery`, `inline` | Artefact file format.                                     |
+| `description`    | string                          | yes      | `min_length=1`, `max_length=500`                        | What this artefact is.                                          |
+| `fields`         | tuple of `FieldDescription`     | yes      | `min_length=1`, `max_length=100`                        | Data dictionary for the artefact's columns.                      |
+
+**`FieldDescription`**
+
+| Field              | Type              | Required | Constraints                              | Meaning                                                        |
+| ------------------- | ----------------- | -------- | -------------------------------------------- | -------------------------------------------------------------------- |
+| `name`               | string             | yes      | `min_length=1`, `max_length=120`             | Column name.                                                          |
+| `type`               | literal            | yes      | one of `number`, `integer`, `string`, `boolean`, `date`, `datetime` | Column's data type.                             |
+| `unit`               | string \| null     | no       | default `null`, `max_length=64`              | Unit of measure, if any.                                              |
+| `interval_level`     | float \| null      | no       | default `null`, `gt=0.0`, `lt=1.0`           | Confidence/credible level, if this column is an interval bound.       |
+| `meaning`            | string             | yes      | `min_length=1`, `max_length=500`             | What the column represents.                                           |
+| `read_as`            | string             | yes      | `min_length=1`, `max_length=500`             | How to read the value in plain language.                              |
+
+### `findings` fields (`Finding`)
+
+| Field                    | Type                       | Required | Constraints                                       | Meaning                                                  |
+| ------------------------- | --------------------------- | -------- | ------------------------------------------------------ | --------------------------------------------------------------- |
+| `id`                       | string                       | yes      | `min_length=1`, `max_length=64`, pattern `^[a-z][a-z0-9_]*$` | Stable identifier for the finding.                        |
+| `importance`               | integer                     | yes      | `ge=1`, `le=100`                                        | Relative importance, for ranking/ordering.                       |
+| `statement`                | string                       | yes      | `min_length=1`, `max_length=1000`                       | The conclusion, in prose.                                        |
+| `quantity`                 | `Quantity`                  | yes      | —                                                        | The number itself, with its unit.                                |
+| `uncertainty`               | `Uncertainty`                | yes      | —                                                        | How sure the number is — three conditional regimes, see below.   |
+| `direction`                | literal                     | yes      | one of `increase`, `decrease`, `stable`, `not_applicable` | Direction of the finding relative to its baseline.            |
+| `comparison_baseline`      | `ComparisonBaseline` \| null | no       | default `null`                                          | What the finding is compared against, if anything.               |
+| `confidence`               | literal                     | yes      | one of `high`, `moderate`, `low`                        | Overall confidence in the finding.                               |
+| `confidence_rationale`     | string                       | yes      | `min_length=1`, `max_length=500`                        | Why that confidence level.                                       |
+
+**`Quantity`**
+
+| Field   | Type   | Required | Constraints                       | Meaning                          |
+| ------- | ------ | -------- | ------------------------------------ | -------------------------------------- |
+| `value`  | float  | yes      | —                                     | The numeric value.                    |
+| `unit`   | string | yes      | `min_length=1`, `max_length=64`      | Unit of the value, e.g. `"BRL"`.       |
+
+**`Uncertainty`**
+
+| Field   | Type          | Required            | Constraints                       | Meaning                                            |
+| ------- | ------------- | -------------------- | ------------------------------------ | --------------------------------------------------------- |
+| `kind`   | literal        | yes                  | one of `credible_interval`, `confidence_interval`, `prediction_interval`, `standard_error`, `none` | Vocabulary of the uncertainty method used. |
+| `level`  | float \| null  | conditional (see below) | default `null`, `gt=0.0`, `lt=1.0`   | Interval level, e.g. `0.95`.                                |
+| `lower`  | float \| null  | conditional (see below) | default `null`                       | Lower bound.                                                |
+| `upper`  | float \| null  | conditional (see below) | default `null`                       | Upper bound.                                                |
+
+`Uncertainty` has **three conditional regimes**, enforced by a model
+validator (`_bounds_match_the_kind` in `findings.py`) — the per-field
+constraints above are necessary but not sufficient, and a code generator
+that only reads the field table will produce payloads that fail at
+validation time:
+
+- `kind` in `{credible_interval, confidence_interval, prediction_interval}`:
+  `level`, `lower`, and `upper` are all **required** (must be non-null),
+  and `upper` must not be less than `lower`. Omitting any of the three,
+  or supplying `upper < lower`, raises a `ValueError`.
+- `kind == "none"`: `lower` and `upper` **must both be null**. Supplying
+  either one raises a `ValueError` — there is no interval to report.
+- `kind == "standard_error"`: no cross-field rule applies. `level`,
+  `lower`, and `upper` may each be null or set; the validator neither
+  requires nor forbids them for this kind.
+
+**`ComparisonBaseline`**
+
+| Field   | Type   | Required | Constraints                       | Meaning                               |
+| ------- | ------ | -------- | ------------------------------------ | -------------------------------------------- |
+| `label`  | string | yes      | `min_length=1`, `max_length=200`     | What the finding is being compared against.  |
+| `value`  | float  | yes      | —                                     | The baseline's numeric value.                |
+
+### `diagnostics` and `overall_quality` fields
+
+**`Diagnostic`**
+
+| Field        | Type    | Required | Constraints                       | Meaning                                        |
+| ------------- | ------- | -------- | ------------------------------------ | ----------------------------------------------------- |
+| `name`         | string  | yes      | `min_length=1`, `max_length=120`     | Name of the quality check.                            |
+| `value`        | float   | yes      | —                                     | The measured value.                                    |
+| `threshold`    | string  | yes      | `min_length=1`, `max_length=64`      | The threshold it was judged against, e.g. `"> 0.70"`.  |
+| `status`       | literal | yes      | one of `pass`, `warn`, `fail`        | Verdict for this specific check.                       |
+| `meaning`      | string  | yes      | `min_length=1`, `max_length=500`     | What this check means in plain language.               |
+
+**`OverallQuality`**
+
+| Field     | Type    | Required | Constraints                       | Meaning                                    |
+| --------- | ------- | -------- | ------------------------------------ | ------------------------------------------------ |
+| `status`   | literal | yes      | one of `pass`, `warn`, `fail`        | Single trust verdict for the whole readout.       |
+| `summary`  | string  | yes      | `min_length=1`, `max_length=1000`    | Why that verdict.                                  |
+
+### `caveats` fields (`Caveat`)
+
+| Field               | Type    | Required | Constraints                       | Meaning                                                                 |
+| -------------------- | ------- | -------- | ------------------------------------ | ------------------------------------------------------------------------------ |
+| `severity`            | literal | yes      | one of `high`, `medium`, `low`       | How serious the limitation is.                                                  |
+| `statement`           | string  | yes      | `min_length=1`, `max_length=500`     | The limitation, stated.                                                          |
+| `do_not_conclude`     | string  | yes      | `min_length=1`, `max_length=500`     | What must not be concluded from the result because of this limitation. Mandatory — a caveat without it is a disclaimer that changes nobody's reading. |
+
+### `explanation_guide` fields (`ExplanationGuide`)
+
+| Field                          | Type            | Required | Constraints                                                                 | Meaning                                                          |
+| -------------------------------- | ---------------- | -------- | -------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| `audience`                        | string            | yes      | `min_length=1`, `max_length=200`                                                 | Who the narration is written for.                                       |
+| `summary_for_llm`                 | string            | yes      | `min_length=1`, `max_length=2000`                                                | The summary the presenting LLM should base its narration on.            |
+| `what_was_solved`                 | string            | yes      | `min_length=1`, `max_length=1000`                                                | The problem this run solved.                                            |
+| `recommended_narrative_order`     | tuple of string   | no       | default `()`, `max_length=20`                                                    | Suggested order to narrate findings in (typically finding `id`s).       |
+| `must_not_claim`                  | tuple of string   | yes      | `min_length=1`, `max_length=20`                                                  | Claims the presenting LLM must never make about this result.            |
+| `guardrails`                      | tuple of string   | yes      | `min_length=4` (`len(BASE_GUARDRAILS)`), `max_length=20`; first 4 elements must equal `BASE_GUARDRAILS` verbatim, in order | Narration rules — see "The base guardrails" below for the mandatory prefix. |
+
+### `reproducibility` fields (`Reproducibility`)
+
+| Field                     | Type                     | Required | Constraints                       | Meaning                                                  |
+| -------------------------- | ------------------------- | -------- | ------------------------------------ | --------------------------------------------------------------- |
+| `random_seed`                | integer \| null           | no       | default `null`                        | Seed used, if the method is stochastic.                          |
+| `compute_duration_seconds`   | float                     | yes      | `ge=0.0`                              | Wall-clock time of the compute step.                             |
+| `input_digests`              | tuple of `InputDigest`    | yes      | `min_length=1`, `max_length=20`      | Hash of each input, so the same run can be identified later.     |
+| `library_versions`           | dict[string, string]      | yes      | `min_length=1`, `max_length=20` (dict length) | Library name → pinned version used during compute.       |
+
+**`InputDigest`**
+
+| Field     | Type   | Required | Constraints                                             | Meaning                                             |
+| --------- | ------ | -------- | ---------------------------------------------------------- | ---------------------------------------------------------- |
+| `role`     | string | yes      | `min_length=1`, `max_length=32`, pattern `^[a-z][a-z0-9_]*$` | Matches an input role declared in the envelope's `inputs[]`. |
+| `sha256`   | string | yes      | pattern `^[0-9a-f]{64}$`                                     | SHA-256 hex digest of the input.                              |
 
 ### The base guardrails (immutable)
 
