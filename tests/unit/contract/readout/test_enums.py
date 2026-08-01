@@ -78,8 +78,8 @@ def test_severity_values() -> None:
 
 
 def test_role_pattern_matches_the_contract_role_pattern() -> None:
-    """Must stay identical to _ROLE_PATTERN in contract/io_spec.py."""
-    assert ROLE_PATTERN == io_spec._ROLE_PATTERN
+    """Reexported from io_spec.ROLE_PATTERN, not a second copy of the regex."""
+    assert ROLE_PATTERN is io_spec.ROLE_PATTERN
 
 
 def test_max_items_is_the_shared_collection_bound() -> None:

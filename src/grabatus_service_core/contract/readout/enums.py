@@ -4,12 +4,18 @@ from __future__ import annotations
 
 from typing import Final, Literal
 
+from grabatus_service_core.contract.io_spec import ROLE_PATTERN
+
+# Only ROLE_PATTERN needs an explicit reexport marker: it is imported here
+# from io_spec rather than defined, so without this, lint sees an "unused"
+# import even though every other readout module imports it from this file.
+__all__ = ["ROLE_PATTERN"]
+
 READOUT_OUTPUT_ROLE: Final[str] = "model_readout"
 READOUT_VERSION: Final[str] = "1.0"
 
-# Shared by every readout model that names a contract role or bounds a
-# collection. Defined once here rather than duplicated per module.
-ROLE_PATTERN: Final[str] = r"^[a-z][a-z0-9_]*$"
+# Shared by every readout model that bounds a collection. Defined once
+# here rather than duplicated per module.
 MAX_ITEMS: Final[int] = 30
 
 ModelFamily = Literal[
