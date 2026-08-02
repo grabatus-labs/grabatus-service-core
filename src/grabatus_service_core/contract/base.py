@@ -7,6 +7,7 @@ from typing import Generic, Self, TypeVar
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from grabatus_service_core.contract.callback import Callback
+from grabatus_service_core.contract.duplicates import duplicated
 from grabatus_service_core.contract.envelope import Envelope
 from grabatus_service_core.contract.identity import Identity
 from grabatus_service_core.contract.io_spec import (
@@ -51,9 +52,8 @@ class BaseServiceContract(BaseModel, Generic[ParamsT]):  # noqa: UP046
 
     @model_validator(mode="after")
     def _input_roles_are_unique(self) -> Self:
-        roles = [item.role for item in self.inputs]
-        if len(roles) != len(set(roles)):
-            duplicates = sorted({r for r in roles if roles.count(r) > 1})
+        duplicates = duplicated(item.role for item in self.inputs)
+        if duplicates:
             raise ValueError(
                 f"input roles must be unique, got duplicates={duplicates!r}",
             )
@@ -61,9 +61,8 @@ class BaseServiceContract(BaseModel, Generic[ParamsT]):  # noqa: UP046
 
     @model_validator(mode="after")
     def _output_roles_are_unique(self) -> Self:
-        roles = [item.role for item in self.outputs]
-        if len(roles) != len(set(roles)):
-            duplicates = sorted({r for r in roles if roles.count(r) > 1})
+        duplicates = duplicated(item.role for item in self.outputs)
+        if duplicates:
             raise ValueError(
                 f"output roles must be unique, got duplicates={duplicates!r}",
             )

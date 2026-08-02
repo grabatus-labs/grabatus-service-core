@@ -320,6 +320,22 @@ sub-models).
 | `explanation_guide` | `ExplanationGuide`                 | yes      | Narration instructions for whichever LLM presents the result — audience, summary, guardrails. |
 | `reproducibility`   | `Reproducibility`                  | yes      | Seed, compute duration, input hashes, and library versions needed to reproduce the run. |
 
+### Cross-field invariants
+
+Four rules hold across the collections above, enforced by model
+validators rather than by any single field:
+
+- `findings` ids are unique. Two findings under one id make every
+  reference to it ambiguous.
+- `artifacts` roles are unique — the same rule the contract's `outputs`
+  already follow.
+- `reproducibility.input_digests` roles are unique. Two hashes for one
+  role make the run unreproducible, not better documented.
+- every entry of `explanation_guide.recommended_narrative_order` names an
+  id present in `findings`. A dangling reference hands the LLM an
+  instruction it can only obey by inventing the finding, which the
+  guardrails in the same document forbid.
+
 The following sections give the field-level detail for every submodel
 named above, in the same order. Nothing here is inferred from the
 example JSON below — each table is transcribed from the Pydantic model
@@ -575,7 +591,7 @@ validation time:
 | `audience`                        | string            | yes      | `min_length=1`, `max_length=200`                                                 | Who the narration is written for.                                       |
 | `summary_for_llm`                 | string            | yes      | `min_length=1`, `max_length=2000`                                                | The summary the presenting LLM should base its narration on.            |
 | `what_was_solved`                 | string            | yes      | `min_length=1`, `max_length=1000`                                                | The problem this run solved.                                            |
-| `recommended_narrative_order`     | tuple of string   | no       | default `()`, `max_length=20`, each ≤64 chars (matches `Finding.id`'s own bound)  | Suggested order to narrate findings in (typically finding `id`s).       |
+| `recommended_narrative_order`     | tuple of string   | no       | default `()`, `max_length=20`, each ≤64 chars; every entry **must** be an id present in `findings` | Order to narrate the findings in. Ids only — never prose. |
 | `must_not_claim`                  | tuple of string   | yes      | `min_length=1`, `max_length=20`, each ≤500 chars                                 | Claims the presenting LLM must never make about this result.            |
 | `guardrails`                      | tuple of string   | yes      | `min_length=4` (`len(BASE_GUARDRAILS)`), `max_length=20`, each ≤500 chars; first 4 elements must equal `BASE_GUARDRAILS` verbatim, in order | Narration rules — see "The base guardrails" below for the mandatory prefix. |
 

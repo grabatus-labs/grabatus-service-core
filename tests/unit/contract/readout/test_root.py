@@ -85,6 +85,9 @@ def test_findings_may_be_empty(valid_readout: ModelReadout) -> None:
     that turned ``findings`` into a required field with no default.
     """
     payload = valid_readout.model_dump(mode="json")
+    # A run with no findings has nothing to narrate either — leaving the
+    # order populated would name a finding that does not exist.
+    payload["explanation_guide"]["recommended_narrative_order"] = []
     payload["findings"] = []
     assert ModelReadout.model_validate(payload).findings == ()
 

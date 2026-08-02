@@ -4,8 +4,9 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_validator
 
+from grabatus_service_core.contract.duplicates import duplicated
 from grabatus_service_core.contract.readout.enums import ROLE_PATTERN
 
 _FROZEN = ConfigDict(extra="forbid", frozen=True)
@@ -47,3 +48,15 @@ class Reproducibility(BaseModel):
     library_versions: dict[_LibraryName, _LibraryVersion] = Field(
         min_length=1, max_length=_MAX_DIGESTS
     )
+
+    @field_validator("input_digests")
+    @classmethod
+    def _digest_roles_are_unique(
+        cls,
+        digests: tuple[InputDigest, ...],
+    ) -> tuple[InputDigest, ...]:
+        """Two hashes for one role make the run unreproducible, not better documented."""
+        repeated = duplicated(digest.role for digest in digests)
+        if repeated:
+            raise ValueError(f"input_digest roles must be unique, got duplicates={repeated!r}")
+        return digests

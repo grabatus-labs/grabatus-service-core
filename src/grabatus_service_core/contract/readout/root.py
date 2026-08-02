@@ -7,6 +7,7 @@ from typing import Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from grabatus_service_core.contract.duplicates import duplicated
 from grabatus_service_core.contract.envelope import Origin
 from grabatus_service_core.contract.readout.artifacts import ArtifactDescription
 from grabatus_service_core.contract.readout.caveats import Caveat
@@ -114,4 +115,37 @@ class ModelReadout(BaseModel):
         """A naive timestamp is ambiguous across the platform's regions."""
         if self.generated_at.tzinfo is None:
             raise ValueError(f"generated_at must carry a timezone, got {self.generated_at!r}")
+        return self
+
+    @model_validator(mode="after")
+    def _finding_ids_are_unique(self) -> Self:
+        """Two findings under one id make every reference to it ambiguous."""
+        repeated = duplicated(finding.id for finding in self.findings)
+        if repeated:
+            raise ValueError(f"finding ids must be unique, got duplicates={repeated!r}")
+        return self
+
+    @model_validator(mode="after")
+    def _artifact_roles_are_unique(self) -> Self:
+        """One role, one artefact — the same rule the contract's outputs follow."""
+        repeated = duplicated(artifact.role for artifact in self.artifacts)
+        if repeated:
+            raise ValueError(f"artifact roles must be unique, got duplicates={repeated!r}")
+        return self
+
+    @model_validator(mode="after")
+    def _narrative_order_names_real_findings(self) -> Self:
+        """The order is normative: every step names a ``Finding.id``.
+
+        A dangling reference hands the LLM an instruction it can only obey
+        by inventing the finding — the exact outcome the guardrails forbid.
+        The document would contradict itself and the LLM would pick.
+        """
+        known = {finding.id for finding in self.findings}
+        dangling = sorted(set(self.explanation_guide.recommended_narrative_order) - known)
+        if dangling:
+            raise ValueError(
+                f"recommended_narrative_order names findings that do not exist: {dangling!r}; "
+                f"known finding ids={sorted(known)!r}",
+            )
         return self
