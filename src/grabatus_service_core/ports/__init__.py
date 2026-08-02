@@ -3,6 +3,7 @@
 from grabatus_service_core.ports.authorization import UriAuthorizationPort
 from grabatus_service_core.ports.clock import ClockPort
 from grabatus_service_core.ports.compute import ComputeBackendPort
+from grabatus_service_core.ports.compute_context import ComputeContext
 from grabatus_service_core.ports.job_dispatcher import (
     DispatchedJob,
     JobDispatcherPort,
@@ -24,6 +25,7 @@ from grabatus_service_core.ports.webhook import WebhookPort
 __all__ = [
     "ClockPort",
     "ComputeBackendPort",
+    "ComputeContext",
     "ComputeResult",
     "Credentials",
     "DispatchedJob",

@@ -6,6 +6,7 @@ from grabatus_service_core.errors.compute import (
     ComputeTimeoutError,
     InvalidReadoutError,
     MissingReadoutError,
+    ReadoutMismatchError,
 )
 from grabatus_service_core.errors.contract import (
     ContractError,
@@ -48,6 +49,7 @@ __all__ = [
     "MalformedMessageError",
     "MissingReadoutError",
     "OutputWriteError",
+    "ReadoutMismatchError",
     "SecurityError",
     "StorageError",
     "UnauthorizedUriError",

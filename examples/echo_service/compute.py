@@ -9,6 +9,7 @@ from pydantic import BaseModel
 from grabatus_service_core.ports.values import ComputeResult
 
 if TYPE_CHECKING:
+    from grabatus_service_core.ports.compute_context import ComputeContext
     from grabatus_service_core.ports.values import LoadedInputs
 
 
@@ -23,7 +24,16 @@ class EchoComputeBackend:
     OPTIONAL_INPUT_ROLES: ClassVar[frozenset[str]] = frozenset()
     OUTPUT_ROLES: ClassVar[frozenset[str]] = frozenset({"echoed"})
 
-    def run(self, *, inputs: LoadedInputs, parameters: EchoParameters) -> ComputeResult:
+    def run(
+        self,
+        *,
+        inputs: LoadedInputs,
+        parameters: EchoParameters,
+        context: ComputeContext,
+    ) -> ComputeResult:
+        # No readout yet: issue #11 — ModelFamily has no honest value for a
+        # passthrough. The context this service would need is already here.
+        del context
         return ComputeResult(
             by_role={"echoed": inputs.by_role["payload"]},
             metadata={"echo": True},

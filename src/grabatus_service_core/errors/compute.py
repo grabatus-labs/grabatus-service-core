@@ -33,3 +33,15 @@ class InvalidReadoutError(ComputeError):
     """The ``model_readout`` produced does not satisfy the readout schema."""
 
     error_code = "invalid_model_readout"
+
+
+class ReadoutMismatchError(ComputeError):
+    """The readout is schema-valid but describes a different run.
+
+    Distinct from ``invalid_model_readout`` because the cause differs: the
+    schema error is a bug in how the service builds the artifact, this one
+    means the artifact belongs to another request — a cached or copied
+    readout that would explain the wrong numbers to the client.
+    """
+
+    error_code = "readout_identity_mismatch"

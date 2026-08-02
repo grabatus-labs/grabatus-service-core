@@ -261,6 +261,7 @@ Every public error inherits `GrabatusServiceError` and carries a stable
 | Compute  | `ComputeTimeoutError`             | Compute exceeded its budget.                      |
 | Compute  | `MissingReadoutError`             | Compute produced no `model_readout` role.         |
 | Compute  | `InvalidReadoutError`             | The `model_readout` fails the readout schema.     |
+| Compute  | `ReadoutMismatchError`            | The `model_readout` describes a different run.    |
 | Webhook  | `WebhookAuthError`                | JWT signing/verification failed.                  |
 | Webhook  | `WebhookError`                    | Network failure delivering the callback.          |
 
@@ -291,7 +292,7 @@ Human messages may evolve; do not match on them.
 
 ## 5. Model Readout
 
-Alongside the numeric artefacts a service writes, it may also emit a
+Alongside the numeric artefacts a service writes, it must also emit a
 `model_readout`: a fixed-schema JSON document that carries everything an
 LLM needs to explain a result to the client without inferring,
 recalculating, or guessing at context the numbers alone don't carry. It
@@ -867,11 +868,31 @@ like any other, so the platform fetches it by URI. Under `1.0` the readout
 is still validated but has nowhere declared to go, and is dropped after the
 check. Emit `1.1` contracts to retrieve readouts.
 
-One gap remains open, tracked in issue #13: `ComputeBackendPort.run`
-receives only `inputs` and `parameters`, so a service cannot see the
-`request_id`, `result_id`, `parameter_id`, `tenant_id` and `origin` that
-`ReadoutRequest` requires. Until that is resolved, only test doubles can
-populate the `request` block correctly.
+**The service is given what the readout demands.**
+`ComputeBackendPort.run` receives a third keyword argument, `context: ComputeContext`,
+carrying the run identity the `request` and `service` blocks require:
+
+```python
+def run(self, *, inputs, parameters, context) -> ComputeResult:
+    readout = ModelReadout(
+        generated_at=context.generated_at,   # from the SDK clock, not datetime.now()
+        request=context.readout_request(),   # request/result/parameter/tenant/origin
+        service=context.readout_service(),   # name and version from the contract
+        ...                                  # everything else is the service's own
+    )
+```
+
+`ComputeContext` exposes `request_id`, `result_id`, `parameter_id`,
+`tenant_id`, `origin`, `service_name`, `service_version` and
+`generated_at`, plus the two builders above. It is a projection of the
+contract, not the contract: a backend never sees callbacks, credentials or
+URIs. `HttpComputeBackend` forwards the same fields to off-platform
+backends under a `context` key in its request envelope.
+
+After the schema check, the runner compares the readout's `request` and
+`service` blocks against the contract. A readout that is schema-valid but
+belongs to another run — a cached or copied artefact — fails with
+`ReadoutMismatchError` before anything is written.
 
 ---
 

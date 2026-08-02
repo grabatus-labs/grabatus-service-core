@@ -11,6 +11,7 @@ from grabatus_service_core.testing.readout import make_model_readout
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
+    from grabatus_service_core.ports.compute_context import ComputeContext
     from grabatus_service_core.ports.values import LoadedInputs
 
 
@@ -66,17 +67,31 @@ class FakeComputeBackend:
         self._metadata = dict(metadata or {})
         self._emit_readout = emit_readout
 
-    def run(self, *, inputs: LoadedInputs, parameters: Any) -> ComputeResult:  # noqa: ANN401
+    def run(
+        self,
+        *,
+        inputs: LoadedInputs,
+        parameters: Any,  # noqa: ANN401
+        context: ComputeContext,
+    ) -> ComputeResult:
         del inputs, parameters
-        return ComputeResult(by_role=self._resolved_outputs(), metadata=self._metadata)
+        return ComputeResult(by_role=self._resolved_outputs(context), metadata=self._metadata)
 
-    def _resolved_outputs(self) -> dict[str, bytes]:
+    def _resolved_outputs(self, context: ComputeContext) -> dict[str, bytes]:
         """Supply the readout the runner now demands, unless the test opted out.
+
+        The identity blocks come from ``context``, never from the canned
+        defaults: a fake that stamped its own ids would fail the runner's
+        mismatch check on every real contract.
 
         Tests that pass their own ``model_readout`` keep it — that is how an
         invalid readout gets through to the runtime gate.
         """
         if not self._emit_readout or READOUT_OUTPUT_ROLE in self._outputs:
             return self._outputs
-        payload = make_model_readout().model_dump_json().encode("utf-8")
-        return self._outputs | {READOUT_OUTPUT_ROLE: payload}
+        readout = make_model_readout(
+            generated_at=context.generated_at,
+            request=context.readout_request(),
+            service=context.readout_service(),
+        )
+        return self._outputs | {READOUT_OUTPUT_ROLE: readout.model_dump_json().encode("utf-8")}

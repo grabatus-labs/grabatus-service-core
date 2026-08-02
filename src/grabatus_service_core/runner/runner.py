@@ -30,6 +30,7 @@ from grabatus_service_core.runner.steps import (
     authorize,
     decode,
     load_inputs,
+    make_compute_context,
     notify_webhook,
     resolve_credentials,
     run_compute,
@@ -112,12 +113,14 @@ class ServiceRunner(Generic[ParamsT]):  # noqa: UP046 — TypeVar form needed fo
                 credentials=credentials,
                 storage=self.storage,
             )
+            context = make_compute_context(authorized=authorized, clock=self.clock)
             compute_result = run_compute(
                 authorized=authorized,
                 inputs=inputs,
                 compute=self.compute,
+                context=context,
             )
-            validate_readout(result=compute_result)
+            validate_readout(result=compute_result, context=context)
             receipts = save_outputs(
                 authorized=authorized,
                 credentials=credentials,

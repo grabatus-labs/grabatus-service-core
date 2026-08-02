@@ -103,7 +103,10 @@ def test_protocol_1_1_writes_the_readout_where_the_platform_can_fetch_it() -> No
     assert result.receipts is not None
     assert READOUT_OUTPUT_ROLE in result.receipts.by_role
     persisted = json.loads(_read(storage, _READOUT_URI))
-    assert persisted["service"]["name"] == "grabatus-basketanalysis"
+    contract = _contract_dict(protocol_version="1.1", with_readout_output=True)
+    # What the platform fetches must identify this run, not a canned example.
+    assert persisted["request"]["request_id"] == contract["envelope"]["request_id"]
+    assert persisted["service"]["name"] == contract["service"]["name"]
 
 
 def test_protocol_1_1_rejects_a_contract_that_declares_no_readout_output() -> None:

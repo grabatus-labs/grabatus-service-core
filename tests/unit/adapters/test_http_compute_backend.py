@@ -17,11 +17,13 @@ from grabatus_service_core.adapters.http_compute_backend import (
 from grabatus_service_core.errors import ComputeError
 from grabatus_service_core.ports.compute import ComputeBackendPort
 from grabatus_service_core.ports.values import LoadedInputs
+from grabatus_service_core.testing import make_compute_context
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
 _TARGET_URL = "https://lambda.example.com/forecast"
+_CONTEXT = make_compute_context()
 
 
 def _backend(
@@ -82,6 +84,7 @@ def test_http_backend_returns_compute_result_on_2xx() -> None:
     result = backend.run(
         inputs=LoadedInputs(by_role={"timeseries": b"raw-bytes"}),
         parameters=None,
+        context=_CONTEXT,
     )
 
     assert result.by_role["result_json"] == b'{"forecast":1}'
@@ -95,12 +98,30 @@ def test_http_backend_sends_inputs_as_base64() -> None:
     backend.run(
         inputs=LoadedInputs(by_role={"timeseries": b"hello"}),
         parameters={"horizon": 30},
+        context=_CONTEXT,
     )
 
     body = client.post.call_args.kwargs["json"]
     assert body["inputs"]["timeseries"] == base64.b64encode(b"hello").decode("ascii")
     assert body["parameters"] == {"horizon": 30}
     assert client.post.call_args.args == (_TARGET_URL,)
+
+
+def test_http_backend_forwards_the_run_identity_to_the_remote_backend() -> None:
+    """An off-platform backend needs the same ids to build its readout."""
+    client = _client_with(_response(json_body=_ok_body({"result_json": b"x"})))
+
+    _backend(client).run(
+        inputs=LoadedInputs(by_role={"timeseries": b"x"}),
+        parameters=None,
+        context=_CONTEXT,
+    )
+
+    sent = client.post.call_args.kwargs["json"]["context"]
+    assert sent["request_id"] == _CONTEXT.request_id
+    assert sent["tenant_id"] == _CONTEXT.tenant_id
+    assert sent["service_version"] == _CONTEXT.service_version
+    assert sent["generated_at"] == _CONTEXT.generated_at.isoformat()
 
 
 def test_http_backend_sends_parameters_via_model_dump_when_available() -> None:
@@ -114,6 +135,7 @@ def test_http_backend_sends_parameters_via_model_dump_when_available() -> None:
     backend.run(
         inputs=LoadedInputs(by_role={"timeseries": b"x"}),
         parameters=_Params(),
+        context=_CONTEXT,
     )
 
     assert client.post.call_args.kwargs["json"]["parameters"] == {
@@ -129,6 +151,7 @@ def test_http_backend_translates_non_2xx_to_compute_error() -> None:
         backend.run(
             inputs=LoadedInputs(by_role={"timeseries": b"x"}),
             parameters=None,
+            context=_CONTEXT,
         )
 
 
@@ -141,6 +164,7 @@ def test_http_backend_translates_invalid_json_to_compute_error() -> None:
         backend.run(
             inputs=LoadedInputs(by_role={"timeseries": b"x"}),
             parameters=None,
+            context=_CONTEXT,
         )
 
 
@@ -151,6 +175,7 @@ def test_http_backend_translates_non_object_response_to_compute_error() -> None:
         backend.run(
             inputs=LoadedInputs(by_role={"timeseries": b"x"}),
             parameters=None,
+            context=_CONTEXT,
         )
 
 
@@ -161,6 +186,7 @@ def test_http_backend_translates_missing_outputs_field_to_compute_error() -> Non
         backend.run(
             inputs=LoadedInputs(by_role={"timeseries": b"x"}),
             parameters=None,
+            context=_CONTEXT,
         )
 
 
@@ -173,6 +199,7 @@ def test_http_backend_translates_non_string_output_to_compute_error() -> None:
         backend.run(
             inputs=LoadedInputs(by_role={"timeseries": b"x"}),
             parameters=None,
+            context=_CONTEXT,
         )
 
 
@@ -185,6 +212,7 @@ def test_http_backend_translates_invalid_base64_output_to_compute_error() -> Non
         backend.run(
             inputs=LoadedInputs(by_role={"timeseries": b"x"}),
             parameters=None,
+            context=_CONTEXT,
         )
 
 
@@ -199,6 +227,7 @@ def test_http_backend_translates_non_dict_metadata_to_compute_error() -> None:
         backend.run(
             inputs=LoadedInputs(by_role={"timeseries": b"x"}),
             parameters=None,
+            context=_CONTEXT,
         )
 
 
@@ -209,6 +238,7 @@ def test_http_backend_treats_missing_metadata_as_empty() -> None:
     result = backend.run(
         inputs=LoadedInputs(by_role={"timeseries": b"x"}),
         parameters=None,
+        context=_CONTEXT,
     )
 
     assert dict(result.metadata) == {}
@@ -223,6 +253,7 @@ def test_http_backend_retries_on_timeout_then_succeeds() -> None:
     result = backend.run(
         inputs=LoadedInputs(by_role={"timeseries": b"x"}),
         parameters=None,
+        context=_CONTEXT,
     )
 
     assert result.by_role["result_json"] == b"recovered"
@@ -238,6 +269,7 @@ def test_http_backend_translates_other_httpx_error_to_compute_error() -> None:
         backend.run(
             inputs=LoadedInputs(by_role={"timeseries": b"x"}),
             parameters=None,
+            context=_CONTEXT,
         )
 
 
