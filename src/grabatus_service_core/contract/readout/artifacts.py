@@ -39,6 +39,12 @@ ArtifactUri = Annotated[
     UrlConstraints(max_length=_MAX_URI_LENGTH, allowed_schemes=list(_ALLOWED_ARTIFACT_SCHEMES)),
 ]
 
+# Pydantic does not project `allowed_schemes` into the JSON Schema, so a
+# consumer validating against the published snapshot — which is exactly
+# what the Django platform does — would accept `data:` while the model
+# rejects it. Derived from the tuple above so the two cannot drift.
+ARTIFACT_URI_PATTERN: Final[str] = f"^({'|'.join(_ALLOWED_ARTIFACT_SCHEMES)})://"
+
 FieldType = Literal["number", "integer", "string", "boolean", "date", "datetime"]
 
 
@@ -61,7 +67,7 @@ class ArtifactDescription(BaseModel):
     model_config = _FROZEN
 
     role: str = Field(min_length=1, max_length=32, pattern=ROLE_PATTERN)
-    uri: ArtifactUri
+    uri: ArtifactUri = Field(json_schema_extra={"pattern": ARTIFACT_URI_PATTERN})
     format: DataFormat
     description: str = Field(min_length=1, max_length=500)
     fields: tuple[FieldDescription, ...] = Field(min_length=1, max_length=_MAX_FIELDS)

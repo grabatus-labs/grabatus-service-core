@@ -42,6 +42,7 @@
           "format": "uri",
           "maxLength": 2048,
           "minLength": 1,
+          "pattern": "^(gs|bigquery|secret)://",
           "title": "Uri",
           "type": "string"
         }
