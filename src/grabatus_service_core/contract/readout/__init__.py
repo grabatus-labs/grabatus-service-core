@@ -10,6 +10,7 @@ from __future__ import annotations
 from grabatus_service_core.contract.readout.artifacts import (
     ArtifactDescription,
     FieldDescription,
+    FieldType,
 )
 from grabatus_service_core.contract.readout.caveats import Caveat
 from grabatus_service_core.contract.readout.data import (
@@ -21,6 +22,14 @@ from grabatus_service_core.contract.readout.diagnostics import Diagnostic, Overa
 from grabatus_service_core.contract.readout.enums import (
     READOUT_OUTPUT_ROLE,
     READOUT_VERSION,
+    Confidence,
+    DiagnosticStatus,
+    Direction,
+    ModelFamily,
+    Paradigm,
+    QualityStatus,
+    Severity,
+    UncertaintyKind,
 )
 from grabatus_service_core.contract.readout.findings import (
     ComparisonBaseline,
@@ -44,6 +53,7 @@ from grabatus_service_core.contract.readout.knowledge import (
 )
 from grabatus_service_core.contract.readout.model import (
     Assumption,
+    HyperparameterValue,
     ModelDescription,
     Prior,
 )
@@ -66,30 +76,40 @@ __all__ = [
     "Assumption",
     "Caveat",
     "ComparisonBaseline",
+    "Confidence",
     "DataProvenance",
     "Diagnostic",
+    "DiagnosticStatus",
+    "Direction",
     "EntitySummary",
     "ExplanationGuide",
     "FieldDescription",
+    "FieldType",
     "Finding",
+    "HyperparameterValue",
     "InputDigest",
     "InputRequirement",
     "InterpretationRule",
     "Misreading",
     "ModelDescription",
+    "ModelFamily",
     "ModelReadout",
     "Origin",
     "OverallQuality",
+    "Paradigm",
     "PeriodCovered",
     "Persona",
     "Prior",
+    "QualityStatus",
     "Quantity",
     "ReadoutRequest",
     "ReadoutService",
     "Reproducibility",
     "ServiceKnowledge",
+    "Severity",
     "Term",
     "Uncertainty",
+    "UncertaintyKind",
     "WorkflowStep",
     "build_explanation_guide",
 ]

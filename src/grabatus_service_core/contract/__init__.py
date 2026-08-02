@@ -1,5 +1,13 @@
-"""Pydantic v2 schemas defining the platform-service protocol."""
+"""Pydantic v2 schemas defining the platform-service protocol.
 
+The canonical import path for the readout is
+``grabatus_service_core.contract.readout`` — reexported here so the
+subpackage is discoverable from the same facade as everything else.
+Its private modules (``readout.enums``, ``readout.root``, …) are
+implementation detail; import from the subpackage, not from them.
+"""
+
+from grabatus_service_core.contract import readout
 from grabatus_service_core.contract.base import BaseServiceContract
 from grabatus_service_core.contract.callback import Callback
 from grabatus_service_core.contract.envelope import Envelope
@@ -41,4 +49,5 @@ __all__ = [
     "ServiceDescriptor",
     "XlsxHints",
     "is_protocol_version_supported",
+    "readout",
 ]

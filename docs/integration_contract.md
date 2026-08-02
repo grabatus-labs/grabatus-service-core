@@ -297,9 +297,17 @@ Alongside the numeric artefacts a service writes, it must also emit a
 LLM needs to explain a result to the client without inferring,
 recalculating, or guessing at context the numbers alone don't carry. It
 travels like any other output, under the fixed output role
-`model_readout` and format `json`. The Pydantic models live under
-`grabatus_service_core.contract.readout` (`ModelReadout` and its
-sub-models).
+`model_readout` and format `json`.
+
+**Canonical import path:** `grabatus_service_core.contract.readout`. It
+exports `ModelReadout`, every sub-model, `build_explanation_guide`, and
+the closed vocabularies a service needs to annotate its own code under
+`mypy --strict` — `ModelFamily`, `Paradigm`, `UncertaintyKind`,
+`Direction`, `Confidence`, `DiagnosticStatus`, `QualityStatus`,
+`Severity`, `FieldType`, `HyperparameterValue` and `Origin`. The modules
+beneath it (`readout.enums`, `readout.root`, …) are implementation
+detail: importing from them, or redeclaring a vocabulary locally, is how
+services drift from the schema.
 
 ### Top-level blocks (`ModelReadout`)
 
