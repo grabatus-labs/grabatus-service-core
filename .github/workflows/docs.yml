@@ -9,10 +9,13 @@ concurrency:
   group: docs-${{ github.ref }}
   cancel-in-progress: true
 
+# No `pages: write` / `id-token: write`: this workflow builds the docs, it
+# does not publish them. See issue #14 — the deploy job 404'd on every run
+# since April because GitHub Pages was never enabled, and a permanently red
+# check teaches everyone to ignore red. To publish, enable Pages in Settings
+# and restore both the job and these permissions.
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 jobs:
   build:
@@ -48,16 +51,12 @@ jobs:
           </body></html>
           HTML
 
-      - uses: actions/upload-pages-artifact@v3
+      # A plain artifact, not `upload-pages-artifact`: nothing deploys it to
+      # Pages, and a Pages-shaped upload in a workflow that never reaches
+      # Pages is how the dead deploy job survived four months unnoticed.
+      # Kept so a reviewer can download and read the rendered docs.
+      - uses: actions/upload-artifact@v4
         with:
+          name: docs-html
           path: docs/_build/html
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v4
+          retention-days: 14
