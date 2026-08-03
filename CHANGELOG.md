@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.1] — 2026-08-03
+
+### Fixed
+- `ArtifactDescription.uri` now enforces its scheme allowlist when the
+  model is built in Python, not only on the JSON round-trip. Pydantic
+  skips `UrlConstraints` for an already-constructed `AnyUrl`, so
+  `AnyUrl("data:...;base64,...")` was accepted in a service's own unit
+  test and rejected in production.
+- `file` joins `gs`, `bigquery` and `secret` in that allowlist. Every
+  local run writes under `GBT_ALLOWED_SCHEMES="inline,file"`, so
+  excluding it made the readout gate unsatisfiable in local mode for
+  every service at once. `data:` and `inline://` stay out — both embed
+  their payload in the URI. `docs/integration_contract.md` now states
+  the matching consumer rule: fetch artefacts by the `destination_uri`
+  you authored, and never dereference a `file://` artefact URI.
+
 ## [0.3.0] — 2026-08-03
 
 Protocol `1.1`: a service must now explain what it computed. `1.0`
