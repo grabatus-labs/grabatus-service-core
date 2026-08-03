@@ -178,7 +178,7 @@ exclude_dirs = ["tests"]
 # character, which makes "/" a mutation root and copies the whole filesystem.
 paths_to_mutate = ["src/grabatus_service_core/"]
 tests_dir = ["tests/"]
-# The suite imports examples.echo_service and scripts.check_pragma_comments;
+# The suite imports examples.forecast_service and scripts.check_pragma_comments;
 # without these the mutants/ tree cannot collect and mutmut aborts before
 # running a single mutant.
 also_copy = ["examples/", "scripts/"]

@@ -93,7 +93,7 @@ about as simple as a real service gets.
 
 Compose the contract, post it to ``/run_service``, assert the
 ``RecordingWebhookNotifier`` received a JWT-signed callback. See
-``tests/integration/test_echo_service.py`` in the core repo for the
+``tests/integration/test_forecast_service.py`` in the core repo for the
 full pattern.
 
 6. Switch to real adapters in production

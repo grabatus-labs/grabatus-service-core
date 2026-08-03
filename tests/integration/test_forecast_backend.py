@@ -4,13 +4,19 @@ Before ``ComputeContext`` existed, ``run()`` saw only ``inputs`` and
 ``parameters``, while the readout demanded five ids that live in the
 contract. Every test that passed did so because the SDK's own fake emitted
 synthetic ids. These tests use a backend written the way a service author
-writes one — see :mod:`tests.integration.reference_backend`.
+writes one — see :mod:`examples.forecast_service.compute`.
 """
 
 from __future__ import annotations
 
 import json
 from typing import Any
+
+from examples.forecast_service.compute import (
+    RESULT_URI,
+    MovingAverageBackend,
+    MovingAverageParameters,
+)
 
 from grabatus_service_core.contract.base import BaseServiceContract
 from grabatus_service_core.contract.readout.enums import READOUT_OUTPUT_ROLE
@@ -31,11 +37,6 @@ from grabatus_service_core.testing import (
     make_input_spec,
     make_output_spec,
     make_service_descriptor,
-)
-from tests.integration.reference_backend import (
-    RESULT_URI,
-    MovingAverageBackend,
-    MovingAverageParameters,
 )
 
 _READOUT_URI = "gs://gbt-storage-grabatus/user_999/readout.json"

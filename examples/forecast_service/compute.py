@@ -1,10 +1,20 @@
-"""A hand-written backend that satisfies the readout gate, as a service would.
+"""The reference service: a moving-average forecast that explains itself.
 
-Not a test double: nothing here comes from ``testing/``. It exists to prove
-the claim the ComputeContext fix rests on — that a service author, given
-only ``inputs``, ``parameters`` and ``context``, can now produce a readout
-the runner accepts. Every identity field comes from ``context``; everything
-else is knowledge the author writes once.
+This is what a Grabatus service looks like. The computation is deliberately
+trivial — four-week moving average — so that everything else on the page is
+the part worth copying: the `model_readout` the service builds alongside its
+numbers.
+
+Read it in three parts:
+
+1. `MovingAverageParameters` — what the platform may configure.
+2. The `_knowledge`/`_model_description`/… helpers — what the service *is*,
+   written once and unchanged from run to run.
+3. `MovingAverageBackend.run` — the numbers, plus the readout that explains
+   them. Every field identifying the run comes from `context`; nothing here
+   is invented.
+
+Nothing in this module imports from `grabatus_service_core.testing`.
 """
 
 from __future__ import annotations
