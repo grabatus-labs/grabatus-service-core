@@ -55,9 +55,19 @@ def test_paradigm_values() -> None:
     }
 
 
-def test_uncertainty_kind_includes_none_for_deterministic_results() -> None:
-    """Association rules have no interval — the readout must still be expressible."""
-    assert "none" in get_args(UncertaintyKind)
+def test_uncertainty_kind_values() -> None:
+    """The closed set, not just membership: `in` accepts a value added by mistake.
+
+    ``none`` is the load-bearing member — association rules have no
+    interval, and the readout must still be expressible.
+    """
+    assert set(get_args(UncertaintyKind)) == {
+        "credible_interval",
+        "confidence_interval",
+        "prediction_interval",
+        "standard_error",
+        "none",
+    }
 
 
 def test_direction_values() -> None:

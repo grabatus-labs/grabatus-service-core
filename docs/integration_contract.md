@@ -320,7 +320,7 @@ services drift from the schema.
 | `service_knowledge` | `ServiceKnowledge`                 | yes      | What the service is, independent of any single run — see below. |
 | `model`             | `ModelDescription`                 | yes      | What was fitted, its assumptions, priors, and what it cannot answer. |
 | `data`              | `DataProvenance`                   | yes      | Shape and quality of the data behind the result.                 |
-| `artifacts`         | tuple of `ArtifactDescription`, 1–11 | yes    | A data dictionary — role, URI, format, field meanings — for each numeric artefact the service wrote. |
+| `artifacts`         | tuple of `ArtifactDescription`, 1–10 | yes    | A data dictionary — role, URI, format, field meanings — for each numeric artefact the service wrote. The bound is the contract's output budget minus the readout's own slot; the readout never describes itself. |
 | `findings`          | tuple of `Finding`, 0–50            | no       | The conclusions the service is willing to stand behind, each with its own quantity and uncertainty. |
 | `diagnostics`       | tuple of `Diagnostic`, 0–30         | no       | Quality checks already judged against their thresholds.         |
 | `overall_quality`   | `OverallQuality`                   | yes      | The single verdict on whether this result can be trusted.       |

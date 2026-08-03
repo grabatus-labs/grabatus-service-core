@@ -54,6 +54,37 @@ class MovingAverageParameters(BaseModel):
     horizon: int
 
 
+def _workflow() -> tuple[WorkflowStep, ...]:
+    return (
+        WorkflowStep(
+            order=1,
+            what_the_user_does="Sobe o histórico de vendas",
+            what_the_llm_should_say="Confirmo o período coberto antes de projetar.",
+        ),
+    )
+
+
+def _input_requirements() -> tuple[InputRequirement, ...]:
+    return (
+        InputRequirement(
+            column="week",
+            required=True,
+            business_meaning="Semana da venda.",
+            example="2026-03-02",
+        ),
+    )
+
+
+def _playbook() -> tuple[InterpretationRule, ...]:
+    return (
+        InterpretationRule(
+            observed_situation="Projeção estável e histórico curto",
+            what_it_means="O modelo repete o nível recente, não detectou tendência.",
+            what_to_recommend="Tratar como piso, não como previsão firme.",
+        ),
+    )
+
+
 def _knowledge() -> ServiceKnowledge:
     return ServiceKnowledge(
         one_liner="Projeta a demanda das próximas semanas a partir do histórico.",
@@ -62,28 +93,9 @@ def _knowledge() -> ServiceKnowledge:
         when_to_use=("Planejar compra de item com venda estável",),
         when_not_to_use=("Item novo, sem histórico — não há o que suavizar",),
         personas=(Persona(role="Comprador", pains=("Compro demais no pico e falto depois",)),),
-        workflow=(
-            WorkflowStep(
-                order=1,
-                what_the_user_does="Sobe o histórico de vendas",
-                what_the_llm_should_say="Confirmo o período coberto antes de projetar.",
-            ),
-        ),
-        input_requirements=(
-            InputRequirement(
-                column="week",
-                required=True,
-                business_meaning="Semana da venda.",
-                example="2026-03-02",
-            ),
-        ),
-        interpretation_playbook=(
-            InterpretationRule(
-                observed_situation="Projeção estável e histórico curto",
-                what_it_means="O modelo repete o nível recente, não detectou tendência.",
-                what_to_recommend="Tratar como piso, não como previsão firme.",
-            ),
-        ),
+        workflow=_workflow(),
+        input_requirements=_input_requirements(),
+        interpretation_playbook=_playbook(),
         common_misreadings=(),
         glossary=(Term(technical_term="média móvel", client_language="média das últimas semanas"),),
         limitations=("Não captura sazonalidade anual.",),

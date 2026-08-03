@@ -28,11 +28,12 @@ _ContractType = BaseServiceContract[_EmptyParameters]
 
 
 def fuzz_one_input(data: bytes) -> None:
+    # Only ValidationError is swallowed. Catching bare ValueError here
+    # discarded every other failure — the exact class of bug this
+    # harness exists to surface — and contradicted the docstring above.
     try:
         _ContractType.model_validate_json(data)
     except ValidationError:
-        return
-    except (UnicodeDecodeError, ValueError):
         return
 
 

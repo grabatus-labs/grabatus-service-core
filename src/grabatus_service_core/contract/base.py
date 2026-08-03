@@ -20,8 +20,10 @@ from grabatus_service_core.contract.service_descriptor import (
 )
 
 _MAX_INPUTS = 10
-# 10 service outputs plus the mandatory model_readout of protocol 1.1.
-_MAX_OUTPUTS = 11
+# Public: readout/root.py derives its own artifact bound from this one.
+MAX_SERVICE_OUTPUTS = 10
+# The service artefacts plus the mandatory model_readout of protocol 1.1.
+_MAX_OUTPUTS = MAX_SERVICE_OUTPUTS + 1
 
 ParamsT = TypeVar("ParamsT", bound=BaseModel)
 

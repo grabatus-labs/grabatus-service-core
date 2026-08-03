@@ -7,6 +7,7 @@ from typing import Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from grabatus_service_core.contract.base import MAX_SERVICE_OUTPUTS
 from grabatus_service_core.contract.duplicates import duplicated
 from grabatus_service_core.contract.envelope import Origin
 from grabatus_service_core.contract.readout.artifacts import ArtifactDescription
@@ -31,10 +32,19 @@ __all__ = [
     "ReadoutService",
 ]
 
+_FROZEN = ConfigDict(extra="forbid", frozen=True)
+
+# Deliberately NOT named _FROZEN: every other module in this package uses
+# that name for the plain config above, and the same name holding a
+# different value is worse than either convention alone.
 # `protected_namespaces=()` because the field is named `model`, which
 # collides with Pydantic's reserved `model_` prefix warning. The field
 # name is published contract — the config yields, not the name.
-_FROZEN = ConfigDict(extra="forbid", frozen=True, protected_namespaces=())
+_FROZEN_WITH_MODEL_FIELD = ConfigDict(
+    extra="forbid",
+    frozen=True,
+    protected_namespaces=(),
+)
 
 _SEMVER = r"^\d+\.\d+\.\d+$"
 
@@ -55,7 +65,11 @@ _SERVICE_NAME_PATTERN = r"^[a-z][a-z0-9_-]*$"
 # platform-opaque ids up to 128 chars, not the 64 this used to enforce.
 _MAX_PLATFORM_ID_LENGTH = 128
 
-_MAX_ARTIFACTS = 11
+# One artefact description per artefact the service wrote. The readout
+# occupies an output slot but never describes itself, so the ceiling is
+# the contract's output budget minus that slot — derived, because the
+# hand-written 11 was unreachable by two.
+_MAX_ARTIFACTS = MAX_SERVICE_OUTPUTS
 _MAX_FINDINGS = 50
 _MAX_DIAGNOSTICS = 30
 _MAX_CAVEATS = 20
@@ -64,7 +78,7 @@ _MAX_CAVEATS = 20
 class ReadoutRequest(BaseModel):
     """Which request produced this readout."""
 
-    model_config = ConfigDict(extra="forbid", frozen=True)
+    model_config = _FROZEN
 
     request_id: str = Field(min_length=1, max_length=64)
     result_id: str = Field(min_length=1, max_length=_MAX_PLATFORM_ID_LENGTH)
@@ -76,7 +90,7 @@ class ReadoutRequest(BaseModel):
 class ReadoutService(BaseModel):
     """Which service, at which version, produced this readout."""
 
-    model_config = ConfigDict(extra="forbid", frozen=True)
+    model_config = _FROZEN
 
     name: str = Field(min_length=1, max_length=64, pattern=_SERVICE_NAME_PATTERN)
     version: str = Field(pattern=_SEMVER)
@@ -89,7 +103,7 @@ class ModelReadout(BaseModel):
     bounded — nothing in this document may grow with the input size.
     """
 
-    model_config = _FROZEN
+    model_config = _FROZEN_WITH_MODEL_FIELD
 
     readout_version: Literal["1.0"] = READOUT_VERSION
     generated_at: datetime

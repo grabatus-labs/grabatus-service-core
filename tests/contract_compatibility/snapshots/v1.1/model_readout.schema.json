@@ -1240,7 +1240,7 @@
       "items": {
         "$ref": "#/$defs/ArtifactDescription"
       },
-      "maxItems": 11,
+      "maxItems": 10,
       "minItems": 1,
       "title": "Artifacts",
       "type": "array"

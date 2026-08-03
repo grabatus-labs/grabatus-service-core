@@ -44,6 +44,37 @@ from grabatus_service_core.contract.readout.root import (
 __all__ = ["make_model_readout"]
 
 
+def _workflow() -> tuple[WorkflowStep, ...]:
+    return (
+        WorkflowStep(
+            order=1,
+            what_the_user_does="Sobe a planilha",
+            what_the_llm_should_say="Confirmo as colunas obrigatórias.",
+        ),
+    )
+
+
+def _input_requirements() -> tuple[InputRequirement, ...]:
+    return (
+        InputRequirement(
+            column="transaction_id",
+            required=True,
+            business_meaning="Identifica uma compra.",
+            example="TX-000481",
+        ),
+    )
+
+
+def _playbook() -> tuple[InterpretationRule, ...]:
+    return (
+        InterpretationRule(
+            observed_situation="Lift alto e addressable baixo",
+            what_it_means="Afinidade real em volume pequeno.",
+            what_to_recommend="Testar em uma loja.",
+        ),
+    )
+
+
 def _knowledge() -> ServiceKnowledge:
     return ServiceKnowledge(
         one_liner="Descobre quais produtos são comprados juntos.",
@@ -52,28 +83,9 @@ def _knowledge() -> ServiceKnowledge:
         when_to_use=("Definir planograma",),
         when_not_to_use=("Medir efeito causal — use teste A/B",),
         personas=(Persona(role="Gerente comercial", pains=("Não distingo afinidade real",)),),
-        workflow=(
-            WorkflowStep(
-                order=1,
-                what_the_user_does="Sobe a planilha",
-                what_the_llm_should_say="Confirmo as colunas obrigatórias.",
-            ),
-        ),
-        input_requirements=(
-            InputRequirement(
-                column="transaction_id",
-                required=True,
-                business_meaning="Identifica uma compra.",
-                example="TX-000481",
-            ),
-        ),
-        interpretation_playbook=(
-            InterpretationRule(
-                observed_situation="Lift alto e addressable baixo",
-                what_it_means="Afinidade real em volume pequeno.",
-                what_to_recommend="Testar em uma loja.",
-            ),
-        ),
+        workflow=_workflow(),
+        input_requirements=_input_requirements(),
+        interpretation_playbook=_playbook(),
         common_misreadings=(),
         glossary=(Term(technical_term="lift", client_language="mais que o acaso"),),
         limitations=("Não mede canibalização.",),
