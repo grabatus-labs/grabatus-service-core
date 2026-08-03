@@ -497,10 +497,19 @@ any particular run.
 | Field          | Type                          | Required | Constraints                                       | Meaning                                                  |
 | --------------- | ------------------------------ | -------- | ------------------------------------------------------ | --------------------------------------------------------------- |
 | `role`           | string                          | yes      | `min_length=1`, `max_length=32`, pattern `^[a-z][a-z0-9_]*$` | Matches an output role declared in the envelope's `outputs[]`. |
-| `uri`            | URL                             | yes      | valid `AnyUrl`, `max_length=2048`, scheme one of `gs`, `bigquery`, `secret`, published as `"pattern": "^(gs\|bigquery\|secret)://"` | Where the artefact was written. `data:` and `inline://` are rejected — both embed their payload directly in the URI, which would let raw data back into a document that carries none. |
+| `uri`            | URL                             | yes      | valid `AnyUrl`, `max_length=2048`, scheme one of `gs`, `bigquery`, `secret`, `file`, published as `"pattern": "^(gs\|bigquery\|secret\|file)://"` | Where the artefact was written. `data:` and `inline://` are rejected — both embed their payload directly in the URI, which would let raw data back into a document that carries none. |
 | `format`         | literal                         | yes      | one of `xlsx`, `csv`, `json`, `parquet`, `bigquery`, `inline` | Artefact file format.                                     |
 | `description`    | string                          | yes      | `min_length=1`, `max_length=500`                        | What this artefact is.                                          |
 | `fields`         | tuple of `FieldDescription`     | yes      | `min_length=1`, `max_length=100`                        | Data dictionary for the artefact's columns.                      |
+
+> **Consumer rule for `uri`.** Fetch artefacts by the `destination_uri`
+> *you* authored in `outputs[]`. `artifacts[].uri` is descriptive — it
+> says where the service wrote, so the readout can be read on its own —
+> and it is the service, not the platform, that fills it in. In
+> particular, never dereference a `file://` artefact URI: that scheme is
+> accepted because a local run genuinely writes there (see #18), and a
+> platform that fetched it would be reading its own filesystem at a path
+> the service chose.
 
 **`FieldDescription`**
 

@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import Annotated, Final, Literal
 
-from pydantic import AnyUrl, BaseModel, ConfigDict, Field, UrlConstraints
+from pydantic import AnyUrl, BaseModel, ConfigDict, Field, UrlConstraints, field_validator
 
 from grabatus_service_core.contract.io_spec import DataFormat
 from grabatus_service_core.contract.readout.enums import ROLE_PATTERN
@@ -25,14 +25,18 @@ _MAX_FIELDS = 100
 # a string field).
 _MAX_URI_LENGTH: Final[int] = 2048
 
-# Mirrors settings._DEFAULT_ALLOWED_SCHEMES (the SDK's own production
-# default storage scheme allowlist) rather than inventing a parallel list.
-# `inline` is deliberately excluded even though InputSpec/OutputSpec permit
-# it as a *format*: `inline://` embeds its payload directly in the URI —
-# the same smuggling shape as `data:` — so an artifact, which only ever
-# points at where a service already wrote a file, has no legitimate use
-# for either scheme.
-_ALLOWED_ARTIFACT_SCHEMES: Final[tuple[str, ...]] = ("gs", "bigquery", "secret")
+# settings._DEFAULT_ALLOWED_SCHEMES (the SDK's production default storage
+# allowlist) plus `file`. `inline` is deliberately excluded even though
+# InputSpec/OutputSpec permit it as a *format*: `inline://` embeds its
+# payload directly in the URI — the same smuggling shape as `data:` — so
+# an artifact, which only ever points at where a service already wrote a
+# file, has no legitimate use for either scheme.
+#
+# `file` is a different case and belongs here: a bounded path with no
+# embedded payload, and what every local run writes to
+# (GBT_ALLOWED_SCHEMES="inline,file"). Leaving it out made the readout
+# gate unsatisfiable in local mode for every service at once — see #18.
+_ALLOWED_ARTIFACT_SCHEMES: Final[tuple[str, ...]] = ("gs", "bigquery", "secret", "file")
 
 ArtifactUri = Annotated[
     AnyUrl,
@@ -71,3 +75,16 @@ class ArtifactDescription(BaseModel):
     format: DataFormat
     description: str = Field(min_length=1, max_length=500)
     fields: tuple[FieldDescription, ...] = Field(min_length=1, max_length=_MAX_FIELDS)
+
+    @field_validator("uri", mode="before")
+    @classmethod
+    def _check_the_scheme_even_when_prebuilt(cls, uri: object) -> object:
+        """Re-check an already-constructed ``AnyUrl`` against the allowlist.
+
+        Pydantic applies ``UrlConstraints`` while *parsing* a URL; hand it a
+        finished ``AnyUrl`` and the constraint is skipped entirely, so
+        ``AnyUrl("data:...;base64,...")`` was accepted in Python and only
+        rejected on the JSON round-trip the runner performs. A service unit
+        test would pass and the same readout would fail in production.
+        """
+        return str(uri) if isinstance(uri, AnyUrl) else uri
