@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Literal, Self
+from typing import Final, Literal, Self
 
 from pydantic import (
     AnyUrl,
@@ -19,7 +19,10 @@ from grabatus_service_core.contract.secret_ref import (
     SecretRef,
 )
 
-_ROLE_PATTERN = r"^[a-z][a-z0-9_]*$"
+# Public: contract/readout/enums.py reexports this under the same name
+# rather than duplicating the regex, so InputSpec/OutputSpec roles and
+# readout roles (ArtifactDescription, InputDigest) stay a single pattern.
+ROLE_PATTERN: Final[str] = r"^[a-z][a-z0-9_]*$"
 
 DataFormat = Literal["xlsx", "csv", "json", "parquet", "bigquery", "inline"]
 Compression = Literal["none", "gzip", "zstd"]
@@ -39,7 +42,7 @@ class InputSpec(BaseModel):
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    role: str = Field(min_length=1, max_length=32, pattern=_ROLE_PATTERN)
+    role: str = Field(min_length=1, max_length=32, pattern=ROLE_PATTERN)
     source_uri: AnyUrl
     format: DataFormat
     format_hints: FormatHints
@@ -65,7 +68,7 @@ class OutputSpec(BaseModel):
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    role: str = Field(min_length=1, max_length=32, pattern=_ROLE_PATTERN)
+    role: str = Field(min_length=1, max_length=32, pattern=ROLE_PATTERN)
     destination_uri: AnyUrl
     format: DataFormat
     format_hints: FormatHints

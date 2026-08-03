@@ -172,6 +172,12 @@ exclude_lines = [
 exclude_dirs = ["tests"]
 
 [tool.mutmut]
-paths_to_mutate = "src/grabatus_service_core/"
+# mutmut 3.x iterates these keys; a bare string is walked character by
+# character, which makes "/" a mutation root and copies the whole filesystem.
+paths_to_mutate = ["src/grabatus_service_core/"]
+tests_dir = ["tests/"]
+# The suite imports examples.echo_service and scripts.check_pragma_comments;
+# without these the mutants/ tree cannot collect and mutmut aborts before
+# running a single mutant.
+also_copy = ["examples/", "scripts/"]
 runner = "uv run pytest tests/unit tests/property -x -q"
-tests_dir = "tests/"

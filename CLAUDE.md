@@ -2,6 +2,18 @@
 
 Guidance for Claude Code agents working in this repository.
 
+## Task and roadmap management (mandatory rule since 2026-05-09)
+
+**All work items for this repository are tracked as GitHub Issues.**
+
+- Repo (public): https://github.com/grabatus-labs/grabatus-service-core/issues
+- Before starting any work: check for an open Issue. Create one if it does not exist.
+- Commits must reference the Issue: `closes #N` or `refs #N` (conventional commits).
+- **Security vulnerabilities must NEVER be opened as regular Issues on this public repo.**
+  Use GitHub Security Advisories (private, maintainer-only):
+  https://github.com/grabatus-labs/grabatus-service-core/security/advisories
+  All 10 findings from the 2026-05-07 audit are already filed there as drafts.
+
 ## Code style
 
 - Functions: max 20 lines. Split if longer.

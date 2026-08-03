@@ -18,6 +18,7 @@ ENV/
 htmlcov/
 .tox/
 .mutmut-cache
+mutants/
 coverage.xml
 *.cover
 .hypothesis/
