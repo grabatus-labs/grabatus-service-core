@@ -1,6 +1,6 @@
 [project]
 name = "grabatus-service-core"
-version = "0.3.1"
+version = "0.3.2"
 description = "Hexagonal core library for Grabatus computational services"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -64,6 +64,10 @@ packages = ["src/grabatus_service_core"]
 line-length = 100
 target-version = "py312"
 src = ["src", "tests"]
+# Specs and plans are a record of what was decided, with the code as it
+# was written at the time. Reformatting them rewrites that record — and
+# every ruff release that changes a formatting rule would do it again.
+extend-exclude = ["docs/superpowers"]
 
 [tool.ruff.lint]
 select = [

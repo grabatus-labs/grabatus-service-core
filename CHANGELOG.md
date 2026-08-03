@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.2] — 2026-08-03
+
+### Changed
+- Dependency refresh: FastAPI 0.136 → 0.141, plus the transitive
+  security updates the services need. No source change; the whole suite
+  passes on the new versions.
+
+  Note for consumers: FastAPI 0.141 changed `include_router` to attach
+  an `_IncludedRouter` to `app.routes` instead of flattening the
+  router's routes into it. The routes still resolve and respond
+  identically — but a test asserting on `{r.path for r in app.routes}`
+  will stop finding them. Assert that the route responds instead.
+
 ## [0.3.1] — 2026-08-03
 
 ### Fixed
