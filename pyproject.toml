@@ -1,6 +1,6 @@
 [project]
 name = "grabatus-service-core"
-version = "0.3.1"
+version = "0.3.2"
 description = "Hexagonal core library for Grabatus computational services"
 readme = "README.md"
 requires-python = ">=3.12"
