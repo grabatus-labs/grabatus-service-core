@@ -35,7 +35,9 @@ dev = [
     "pytest-cov>=5.0",
     "hypothesis>=6.115",
     'atheris>=2.3; sys_platform == "linux"',
-    "mutmut>=2.5",
+    # <4: mutmut 3.x renamed the config keys and changed their semantics.
+    # The open range let that major swap in silently and the gate ran nothing.
+    "mutmut>=3.5,<4",
     "testcontainers>=4.8",
     "freezegun>=1.5",
     "ruff>=0.7",
@@ -181,3 +183,9 @@ tests_dir = ["tests/"]
 # running a single mutant.
 also_copy = ["examples/", "scripts/"]
 runner = "uv run pytest tests/unit tests/property -x -q"
+# Two more things the runner above cannot fix, because mutmut's own "collect
+# stats" phase invokes pytest directly and ignores this key. Both are set as
+# environment variables by the CI job instead:
+#   PYTEST_ADDOPTS=--no-cov      — addopts carries --cov-fail-under=100, and
+#                                  the partial stats run never reaches it.
+#   HYPOTHESIS_PROFILE=mutation  — see tests/conftest.py.
