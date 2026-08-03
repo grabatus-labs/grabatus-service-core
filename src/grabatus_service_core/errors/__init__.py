@@ -7,6 +7,7 @@ from grabatus_service_core.errors.compute import (
     InvalidReadoutError,
     MissingReadoutError,
     ReadoutMismatchError,
+    UnknownOutputRoleError,
 )
 from grabatus_service_core.errors.contract import (
     ContractError,
@@ -53,6 +54,7 @@ __all__ = [
     "SecurityError",
     "StorageError",
     "UnauthorizedUriError",
+    "UnknownOutputRoleError",
     "UnknownServiceError",
     "UnsupportedProtocolVersionError",
     "UnsupportedSchemeError",

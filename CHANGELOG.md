@@ -7,6 +7,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] — 2026-08-03
+
+Protocol `1.1`: a service must now explain what it computed. `1.0`
+contracts keep working unchanged.
+
+### Added
+- `model_readout`: the fixed-schema JSON document a service emits
+  alongside its numbers, carrying what the model is, what the data was,
+  what was found, how sure it is, and how to say it to the client
+  without inventing. Full schema in `contract/readout/`, specified in
+  §5 of `docs/integration_contract.md`.
+- `ServiceKnowledge`: the knowledge layer inside the readout — what the
+  service does, whose problem it solves, the workflow, the
+  interpretation playbook and the glossary, so an LLM can act as a data
+  scientist beside the client instead of narrating numbers.
+- `ComputeContext` (`ports/compute_context.py`): the run's identity —
+  `request_id`, `result_id`, `parameter_id`, `tenant_id`, `origin`,
+  `service_name`, `service_version`, `generated_at` — plus
+  `output_uris` and the `artifact_uri(role)` accessor. A projection of
+  the contract, never the contract: no callbacks, credentials or input
+  URIs.
+- `MissingReadoutError`, `InvalidReadoutError`, `ReadoutMismatchError`
+  and `UnknownOutputRoleError`, all under `ComputeError`.
+- `protocol_version: "1.1"`, under which the contract declares a
+  `model_readout` output and the runner writes the readout there. The
+  role is owned by the SDK; a service never lists it in `OUTPUT_ROLES`.
+- `examples/forecast_service/`: the reference service, a moving-average
+  forecast that builds a full readout without importing anything from
+  `testing/`.
+
+### Changed
+- **Breaking.** `ComputeBackendPort.run` takes a third keyword-only
+  argument, `context: ComputeContext`. Every backend must be updated.
+- **Breaking.** Every run must produce a `model_readout` in its
+  `ComputeResult`, on `1.0` as well as `1.1`. A run that cannot be
+  explained now fails before anything reaches storage.
+- `outputs` accepts up to 11 entries: 10 service artefacts plus the
+  readout.
+
+### Removed
+- `examples/echo_service/`: an echo backend cannot honestly declare a
+  `ModelFamily`, so it could not be the example a new service copies.
+
 ## [0.2.0] — 2026-04-28
 
 ### Added

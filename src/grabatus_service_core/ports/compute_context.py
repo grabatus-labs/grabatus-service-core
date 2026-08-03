@@ -9,11 +9,14 @@ object the readout gate is unsatisfiable by any real service.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from types import MappingProxyType
 from typing import TYPE_CHECKING, Any
 
 from grabatus_service_core.contract.readout.root import ReadoutRequest, ReadoutService
+from grabatus_service_core.errors import UnknownOutputRoleError
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping
     from datetime import datetime
 
     from grabatus_service_core.contract.base import BaseServiceContract
@@ -38,6 +41,10 @@ class ComputeContext:
     # From the runner's ClockPort, not wall clock: a backend calling
     # datetime.now() itself would make its own readout untestable.
     generated_at: datetime
+    # Where each declared output is being written. The readout's
+    # `artifacts[].uri` must name the real destination, and a backend that
+    # cannot read it has no honest option left but to invent one.
+    output_uris: Mapping[str, str]
 
     @classmethod
     def from_contract(
@@ -48,8 +55,8 @@ class ComputeContext:
     ) -> ComputeContext:
         """Project a validated contract into the subset a backend may see.
 
-        The backend gets ids, never the contract: callbacks, credentials
-        and URIs are none of its business.
+        The backend gets ids and its own output destinations, never the
+        contract: callbacks, credentials and input URIs stay out.
         """
         return cls(
             request_id=str(contract.envelope.request_id),
@@ -60,7 +67,25 @@ class ComputeContext:
             service_name=contract.service.name,
             service_version=contract.service.version,
             generated_at=generated_at,
+            output_uris=MappingProxyType(
+                {spec.role: str(spec.destination_uri) for spec in contract.outputs},
+            ),
         )
+
+    def artifact_uri(self, role: str) -> str:
+        """Where ``role`` is being written, for the readout's ``artifacts[].uri``.
+
+        Fails loudly on an unknown role: a silent fallback would put a
+        plausible-looking wrong URI in the one document the client is told
+        to trust.
+        """
+        try:
+            return self.output_uris[role]
+        except KeyError:
+            raise UnknownOutputRoleError(
+                f"contract declares no output role {role!r}; "
+                f"declared roles are {sorted(self.output_uris)!r}",
+            ) from None
 
     def readout_request(self) -> ReadoutRequest:
         """Build the readout's ``request`` block, so no service maps it by hand.
