@@ -55,6 +55,11 @@ if TYPE_CHECKING:
     from grabatus_service_core.ports.compute_context import ComputeContext
     from grabatus_service_core.ports.values import LoadedInputs
 
+RESULT_ROLE = "result_json"
+
+# Only the contract knows where this run writes. The constant exists so
+# tests can build that contract — the readout reads the value back from
+# `context.artifact_uri`, never from here.
 RESULT_URI = "gs://gbt-storage-grabatus/user_999/forecast.json"
 
 
@@ -144,11 +149,11 @@ def _data() -> DataProvenance:
     )
 
 
-def _artifacts() -> tuple[ArtifactDescription, ...]:
+def _artifacts(result_uri: str) -> tuple[ArtifactDescription, ...]:
     return (
         ArtifactDescription(
-            role="result_json",
-            uri=AnyUrl(RESULT_URI),
+            role=RESULT_ROLE,
+            uri=AnyUrl(result_uri),
             format="json",
             description="Projeção semanal para o horizonte pedido.",
             fields=(
@@ -227,7 +232,7 @@ class MovingAverageBackend:
 
     REQUIRED_INPUT_ROLES: ClassVar[frozenset[str]] = frozenset({"timeseries"})
     OPTIONAL_INPUT_ROLES: ClassVar[frozenset[str]] = frozenset()
-    OUTPUT_ROLES: ClassVar[frozenset[str]] = frozenset({"result_json"})
+    OUTPUT_ROLES: ClassVar[frozenset[str]] = frozenset({RESULT_ROLE})
 
     def run(
         self,
@@ -240,7 +245,7 @@ class MovingAverageBackend:
         readout = self._readout(parameters.horizon, context)
         return ComputeResult(
             by_role={
-                "result_json": b'{"forecast": [120, 120, 120]}',
+                RESULT_ROLE: b'{"forecast": [120, 120, 120]}',
                 READOUT_OUTPUT_ROLE: readout.model_dump_json().encode("utf-8"),
             },
             metadata={"window": 4},
@@ -256,7 +261,7 @@ class MovingAverageBackend:
             service_knowledge=_knowledge(),
             model=_model_description(),
             data=_data(),
-            artifacts=_artifacts(),
+            artifacts=_artifacts(context.artifact_uri(RESULT_ROLE)),
             findings=_findings(horizon),
             diagnostics=_diagnostics(),
             overall_quality=OverallQuality(status="pass", summary="Histórico completo."),

@@ -35,6 +35,17 @@ class InvalidReadoutError(ComputeError):
     error_code = "invalid_model_readout"
 
 
+class UnknownOutputRoleError(ComputeError):
+    """The backend asked the context for a role the contract does not declare.
+
+    Raised only by a service bug — a typo, or a role the backend forgot to
+    list in ``OUTPUT_ROLES``. Typed rather than a bare ``KeyError`` so the
+    runner reports it as a run failure instead of killing the worker.
+    """
+
+    error_code = "unknown_output_role"
+
+
 class ReadoutMismatchError(ComputeError):
     """The readout is schema-valid but describes a different run.
 

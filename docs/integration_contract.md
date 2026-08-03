@@ -262,6 +262,7 @@ Every public error inherits `GrabatusServiceError` and carries a stable
 | Compute  | `MissingReadoutError`             | Compute produced no `model_readout` role.         |
 | Compute  | `InvalidReadoutError`             | The `model_readout` fails the readout schema.     |
 | Compute  | `ReadoutMismatchError`            | The `model_readout` describes a different run.    |
+| Compute  | `UnknownOutputRoleError`          | Backend asked for a role the contract lacks.      |
 | Webhook  | `WebhookAuthError`                | JWT signing/verification failed.                  |
 | Webhook  | `WebhookError`                    | Network failure delivering the callback.          |
 
@@ -910,8 +911,25 @@ def run(self, *, inputs, parameters, context) -> ComputeResult:
 `tenant_id`, `origin`, `service_name`, `service_version` and
 `generated_at`, plus the two builders above. It is a projection of the
 contract, not the contract: a backend never sees callbacks, credentials or
-URIs. `HttpComputeBackend` forwards the same fields to off-platform
+input URIs. `HttpComputeBackend` forwards the same fields to off-platform
 backends under a `context` key in its request envelope.
+
+It also exposes `output_uris` — the contract's `destination_uri` for each
+declared output role — read through `context.artifact_uri(role)`:
+
+```python
+ArtifactDescription(
+    role="forecast_json",
+    uri=AnyUrl(context.artifact_uri("forecast_json")),
+    ...
+)
+```
+
+`artifacts[].uri` must name where the artefact is actually written, and
+only the contract knows that. A backend asking for an undeclared role gets
+`UnknownOutputRoleError` rather than a fallback: a plausible-looking wrong
+URI in the one document the client is told to trust is worse than a failed
+run.
 
 After the schema check, the runner compares the readout's `request` and
 `service` blocks against the contract. A readout that is schema-valid but
