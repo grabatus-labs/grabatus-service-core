@@ -16,10 +16,17 @@ from typing import TYPE_CHECKING, Any
 
 from pydantic import ValidationError
 
+from grabatus_service_core.contract.readout.enums import READOUT_OUTPUT_ROLE
+from grabatus_service_core.contract.readout.root import ModelReadout
+from grabatus_service_core.contract.version import SUPPORTED_PROTOCOL_VERSIONS
 from grabatus_service_core.errors import (
     InvalidContractError,
+    InvalidReadoutError,
+    MissingReadoutError,
+    ReadoutMismatchError,
     UnsupportedProtocolVersionError,
 )
+from grabatus_service_core.ports.compute_context import ComputeContext
 from grabatus_service_core.ports.values import (
     Credentials,
     LoadedInputs,
@@ -42,6 +49,7 @@ if TYPE_CHECKING:
     from grabatus_service_core.contract.callback import Callback
     from grabatus_service_core.contract.io_spec import InputSpec, OutputSpec
     from grabatus_service_core.ports.authorization import UriAuthorizationPort
+    from grabatus_service_core.ports.clock import ClockPort
     from grabatus_service_core.ports.compute import ComputeBackendPort
     from grabatus_service_core.ports.message import MessagePort
     from grabatus_service_core.ports.secrets import SecretsPort
@@ -56,7 +64,6 @@ if TYPE_CHECKING:
     from grabatus_service_core.security.scheme_allowlist import SchemeAllowlist
 
 
-_SUPPORTED_PROTOCOL_VERSIONS = frozenset({"1.0"})
 _NULL_TOKEN_TYPE = "none"  # noqa: S105  # nosec B105 — placeholder for "no creds needed"
 
 
@@ -81,10 +88,10 @@ def validate(
     envelope = payload.get("envelope")
     if isinstance(envelope, dict):
         version = envelope.get("protocol_version")
-        if isinstance(version, str) and version not in _SUPPORTED_PROTOCOL_VERSIONS:
+        if isinstance(version, str) and version not in SUPPORTED_PROTOCOL_VERSIONS:
             raise UnsupportedProtocolVersionError(
                 f"unsupported protocol_version={version!r}; "
-                f"supported={sorted(_SUPPORTED_PROTOCOL_VERSIONS)!r}",
+                f"supported={sorted(SUPPORTED_PROTOCOL_VERSIONS)!r}",
             )
     try:
         contract = contract_type.model_validate(payload)
@@ -143,14 +150,71 @@ def load_inputs(
     return LoadedInputs(by_role=by_role)
 
 
+def make_compute_context(
+    *,
+    authorized: AuthorizedContract[ParamsT],
+    clock: ClockPort,
+) -> ComputeContext:
+    """Step 6a — stamp the run so the backend can describe it in the readout.
+
+    The timestamp comes from the injected clock, never from the backend:
+    a service calling ``datetime.now()`` makes its own readout untestable.
+    """
+    return ComputeContext.from_contract(authorized.contract, generated_at=clock.now())
+
+
 def run_compute(
     *,
     authorized: AuthorizedContract[ParamsT],
     inputs: LoadedInputs,
     compute: ComputeBackendPort,
+    context: ComputeContext,
 ) -> ComputeResult:
     """Step 6 — invoke the service compute backend."""
-    return compute.run(inputs=inputs, parameters=authorized.contract.parameters)
+    return compute.run(
+        inputs=inputs,
+        parameters=authorized.contract.parameters,
+        context=context,
+    )
+
+
+def validate_readout(*, result: ComputeResult, context: ComputeContext) -> ModelReadout:
+    """Step 7 — refuse a result that no LLM could explain without inventing.
+
+    The readout is the only artifact carrying what the numbers mean. A run
+    that produces none is a run whose output nobody can be told about, so it
+    fails here rather than reaching storage.
+    """
+    payload = result.by_role.get(READOUT_OUTPUT_ROLE)
+    if payload is None:
+        raise MissingReadoutError(
+            f"compute produced no {READOUT_OUTPUT_ROLE!r} output; "
+            f"got roles {sorted(result.by_role)!r}",
+        )
+    try:
+        readout = ModelReadout.model_validate_json(payload)
+    except ValidationError as exc:
+        raise InvalidReadoutError(
+            f"{READOUT_OUTPUT_ROLE!r} does not satisfy the readout schema: {exc}",
+        ) from exc
+    _check_readout_identity(readout=readout, context=context)
+    return readout
+
+
+def _check_readout_identity(*, readout: ModelReadout, context: ComputeContext) -> None:
+    """Refuse a schema-valid readout that describes some other run.
+
+    A copied or cached readout explains the wrong numbers to the client,
+    and every field downstream would still look well-formed.
+    """
+    expected = (context.readout_request(), context.readout_service())
+    actual = (readout.request, readout.service)
+    if actual != expected:
+        raise ReadoutMismatchError(
+            f"{READOUT_OUTPUT_ROLE!r} describes another run: expected "
+            f"request={expected[0]!r} service={expected[1]!r}, "
+            f"got request={actual[0]!r} service={actual[1]!r}",
+        )
 
 
 def save_outputs(

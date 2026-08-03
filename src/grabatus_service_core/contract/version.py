@@ -4,7 +4,11 @@ from __future__ import annotations
 
 from typing import Final
 
-SUPPORTED_PROTOCOL_VERSIONS: Final[frozenset[str]] = frozenset({"1.0"})
+SUPPORTED_PROTOCOL_VERSIONS: Final[frozenset[str]] = frozenset({"1.0", "1.1"})
+
+# The version at which `model_readout` becomes a declared output, so the
+# platform can fetch the artifact rather than merely trust it was validated.
+READOUT_PROTOCOL_VERSION: Final[str] = "1.1"
 
 
 def is_protocol_version_supported(version: str) -> bool:

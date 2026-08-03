@@ -29,11 +29,34 @@ jobs:
       - run: uv python install 3.12
       - run: uv sync --extra dev
 
+      # Both variables exist because mutmut's stats phase runs pytest itself
+      # and ignores the `runner` key in pyproject.toml. See [tool.mutmut].
       - name: mutmut run
-        run: uv run mutmut run || true
+        env:
+          PYTEST_ADDOPTS: "--no-cov"
+          HYPOTHESIS_PROFILE: mutation
+        # Surviving mutants are informative, not fatal — that is what `|| true`
+        # is for. A mutmut that never ran IS fatal, and used to look exactly
+        # the same: green job, empty report. The grep tells them apart.
+        run: |
+          set -o pipefail
+          uv run mutmut run 2>&1 | tee mutmut-run.log || true
+          if grep -q "failed to collect stats" mutmut-run.log; then
+            echo "::error::mutmut aborted before evaluating a single mutant"
+            exit 1
+          fi
 
       - name: mutmut results
-        run: uv run mutmut results
+        env:
+          PYTEST_ADDOPTS: "--no-cov"
+          HYPOTHESIS_PROFILE: mutation
+        run: |
+          set -o pipefail
+          uv run mutmut results | tee mutmut-results.txt
+          if [ ! -s mutmut-results.txt ]; then
+            echo "::error::mutmut produced no results — the gate evaluated nothing"
+            exit 1
+          fi
 
       - name: mutmut html
         run: uv run mutmut html

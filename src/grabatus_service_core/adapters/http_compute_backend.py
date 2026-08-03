@@ -8,8 +8,12 @@ rewriting them.
 
 Wire envelope (JSON):
 
-    request:  {"inputs": {<role>: <base64>}, "parameters": <obj>}
+    request:  {"inputs": {<role>: <base64>}, "parameters": <obj>, "context": <obj>}
     response: {"outputs": {<role>: <base64>}, "metadata": <obj>}
+
+``context`` carries the run identity the ``model_readout`` demands. An
+off-platform backend that never receives it cannot satisfy the readout
+gate any more than an in-process one could.
 """
 
 from __future__ import annotations
@@ -26,6 +30,7 @@ from grabatus_service_core.errors import ComputeError
 from grabatus_service_core.ports.values import ComputeResult
 
 if TYPE_CHECKING:
+    from grabatus_service_core.ports.compute_context import ComputeContext
     from grabatus_service_core.ports.values import LoadedInputs
 
 
@@ -37,6 +42,20 @@ _RETRIABLE_HTTP_ERRORS: tuple[type[BaseException], ...] = (
     httpx.ConnectError,
     httpx.RemoteProtocolError,
 )
+
+
+def _encode_context(context: ComputeContext) -> dict[str, str]:
+    """Flatten the run identity for the wire; ``generated_at`` goes as ISO-8601."""
+    return {
+        "request_id": context.request_id,
+        "result_id": context.result_id,
+        "parameter_id": context.parameter_id,
+        "tenant_id": context.tenant_id,
+        "origin": context.origin,
+        "service_name": context.service_name,
+        "service_version": context.service_version,
+        "generated_at": context.generated_at.isoformat(),
+    }
 
 
 def make_http_compute_backend(
@@ -89,8 +108,14 @@ class HttpComputeBackend:
         self._timeout = timeout_seconds
 
     @with_retry(retry_on=_RETRIABLE_HTTP_ERRORS)
-    def run(self, *, inputs: LoadedInputs, parameters: Any) -> ComputeResult:  # noqa: ANN401
-        body = self._encode_request(inputs, parameters)
+    def run(
+        self,
+        *,
+        inputs: LoadedInputs,
+        parameters: Any,  # noqa: ANN401
+        context: ComputeContext,
+    ) -> ComputeResult:
+        body = self._encode_request(inputs, parameters, context)
         try:
             response = self._client.post(
                 self._target_url,
@@ -113,13 +138,18 @@ class HttpComputeBackend:
         self,
         inputs: LoadedInputs,
         parameters: Any,  # noqa: ANN401
+        context: ComputeContext,
     ) -> dict[str, Any]:
         encoded_inputs = {
             role: base64.b64encode(blob).decode("ascii") for role, blob in inputs.by_role.items()
         }
         model_dump = getattr(parameters, "model_dump", None)
         params_payload = model_dump() if callable(model_dump) else parameters
-        return {"inputs": encoded_inputs, "parameters": params_payload}
+        return {
+            "inputs": encoded_inputs,
+            "parameters": params_payload,
+            "context": _encode_context(context),
+        }
 
     def _decode_response(self, response: httpx.Response) -> ComputeResult:
         try:

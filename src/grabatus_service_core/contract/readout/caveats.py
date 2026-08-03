@@ -6,6 +6,8 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from grabatus_service_core.contract.readout.enums import Severity
 
+_FROZEN = ConfigDict(extra="forbid", frozen=True)
+
 
 class Caveat(BaseModel):
     """A limitation stated together with what not to conclude from it.
@@ -14,7 +16,7 @@ class Caveat(BaseModel):
     that changes nobody's reading.
     """
 
-    model_config = ConfigDict(extra="forbid", frozen=True)
+    model_config = _FROZEN
 
     severity: Severity
     statement: str = Field(min_length=1, max_length=500)

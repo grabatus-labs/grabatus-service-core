@@ -21,11 +21,12 @@ from grabatus_service_core.contract.readout import ModelReadout
 
 
 def fuzz_one_input(data: bytes) -> None:
+    # Only ValidationError is swallowed. Catching bare ValueError here
+    # discarded every other failure — the exact class of bug this
+    # harness exists to surface — and contradicted the docstring above.
     try:
         ModelReadout.model_validate_json(data)
     except ValidationError:
-        return
-    except (UnicodeDecodeError, ValueError):
         return
 
 

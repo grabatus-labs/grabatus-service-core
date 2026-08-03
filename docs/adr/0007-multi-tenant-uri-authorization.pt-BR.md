@@ -32,4 +32,4 @@ Falhas de autorização lançam `UriAuthorizationError` com a URI ofensora e a r
 - Acesso cross-tenant a dados é estruturalmente impedido no ponto de entrada de cada serviço.
 - Adicionar um novo tenant não exige mudança de código — só importa o `identity.tenant_id` do contrato.
 - Fakes de teste (`AllowAllPolicy`) facilitam o dev local enquanto deploys reais ficam default-deny.
-- O custo é que toda URI em fixtures de teste precisa seguir o prefixo de tenant. O `examples/echo_service` e os tutoriais demonstram o padrão. Políticas compostas têm property tests em `tests/property/test_uri_authorization_invariants.py` que garantem composição apenas restritiva.
+- O custo é que toda URI em fixtures de teste precisa seguir o prefixo de tenant. O `examples/forecast_service` e os tutoriais demonstram o padrão. Políticas compostas têm property tests em `tests/property/test_uri_authorization_invariants.py` que garantem composição apenas restritiva.

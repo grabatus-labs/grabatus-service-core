@@ -55,6 +55,7 @@ from grabatus_service_core.testing import (
     InMemoryStorage,
     RecordingWebhookNotifier,
     make_callback,
+    make_compute_context,
     make_contract,
     make_envelope,
     make_input_spec,
@@ -304,10 +305,21 @@ def test_run_compute_invokes_compute_with_inputs_and_parameters() -> None:
     expected = ComputeResult(by_role={"result_json": b"out"}, metadata={})
     compute.run.return_value = expected
 
-    result = run_compute(authorized=authorized, inputs=inputs, compute=compute)
+    context = make_compute_context(contract=contract)
+
+    result = run_compute(
+        authorized=authorized,
+        inputs=inputs,
+        compute=compute,
+        context=context,
+    )
 
     assert result is expected
-    compute.run.assert_called_once_with(inputs=inputs, parameters=contract.parameters)
+    compute.run.assert_called_once_with(
+        inputs=inputs,
+        parameters=contract.parameters,
+        context=context,
+    )
 
 
 def test_run_compute_propagates_compute_error() -> None:
@@ -318,7 +330,12 @@ def test_run_compute_propagates_compute_error() -> None:
     compute.run.side_effect = ComputeError("boom")
 
     with pytest.raises(ComputeError):
-        run_compute(authorized=authorized, inputs=inputs, compute=compute)
+        run_compute(
+            authorized=authorized,
+            inputs=inputs,
+            compute=compute,
+            context=make_compute_context(contract=contract),
+        )
 
 
 # ---------- save_outputs ----------

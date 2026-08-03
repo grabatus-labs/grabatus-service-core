@@ -11,6 +11,7 @@ from grabatus_service_core.testing.compute import (
 )
 from grabatus_service_core.testing.factories import (
     make_callback,
+    make_compute_context,
     make_contract,
     make_envelope,
     make_identity,
@@ -48,6 +49,7 @@ __all__ = [
     "RecordingWebhookNotifier",
     "RejectAllPolicy",
     "make_callback",
+    "make_compute_context",
     "make_contract",
     "make_envelope",
     "make_fake_compute_backend",

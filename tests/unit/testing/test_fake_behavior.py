@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from datetime import UTC, datetime
 from uuid import UUID
 
@@ -10,6 +11,7 @@ import pytest
 from grabatus_service_core.contract.callback import Callback
 from grabatus_service_core.contract.identity import Identity
 from grabatus_service_core.contract.io_spec import InputSpec, OutputSpec
+from grabatus_service_core.contract.readout.enums import READOUT_OUTPUT_ROLE
 from grabatus_service_core.contract.secret_ref import SecretRef
 from grabatus_service_core.errors import (
     CredentialResolutionError,
@@ -30,6 +32,7 @@ from grabatus_service_core.testing import (
     InMemoryStorage,
     NullObservability,
     RecordingWebhookNotifier,
+    make_compute_context,
     make_fake_compute_backend,
 )
 
@@ -175,13 +178,21 @@ def test_fake_compute_backend_returns_configured_outputs() -> None:
         metadata={"version": "1.0"},
     )
 
+    context = make_compute_context()
+
     result = backend.run(
         inputs=LoadedInputs(by_role={"timeseries": b"data"}),
         parameters=None,
+        context=context,
     )
 
     assert result.by_role["result_json"] == b"forecast-bytes"
     assert result.metadata["version"] == "1.0"
+    readout = json.loads(result.by_role[READOUT_OUTPUT_ROLE])
+    # The fake must stamp the run it was given, not the canned defaults:
+    # anything else fails the runner's mismatch check.
+    assert readout["request"]["request_id"] == context.request_id
+    assert readout["service"]["name"] == context.service_name
 
 
 def test_make_fake_compute_backend_isolates_role_declarations() -> None:

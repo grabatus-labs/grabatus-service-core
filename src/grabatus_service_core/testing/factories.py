@@ -21,6 +21,7 @@ from grabatus_service_core.contract import (
 from grabatus_service_core.contract.opaque import (
     OpaqueServiceContract,
 )
+from grabatus_service_core.ports.compute_context import ComputeContext
 
 if TYPE_CHECKING:
     from grabatus_service_core.contract.io_spec import Compression
@@ -143,6 +144,27 @@ def make_opaque_contract(
             "callback": (callback or make_callback()).model_dump(mode="json"),
             "parameters": parameters or {},
         },
+    )
+
+
+class _NoParameters(BaseModel):
+    """Parameters placeholder for a context built without a caller-supplied contract."""
+
+
+def make_compute_context(
+    *,
+    contract: BaseServiceContract[Any] | None = None,
+    generated_at: datetime | None = None,
+) -> ComputeContext:
+    """Build the context a backend receives, matching what ``make_contract`` produces.
+
+    Services use this to unit-test their backend without standing up the
+    whole runner.
+    """
+    resolved = contract if contract is not None else make_contract(parameters=_NoParameters())
+    return ComputeContext.from_contract(
+        resolved,
+        generated_at=generated_at or _DEFAULT_CREATED_AT,
     )
 
 

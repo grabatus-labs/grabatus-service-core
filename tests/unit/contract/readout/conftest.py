@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 
-from tests.unit.contract.readout.builders import build_valid_readout
+from grabatus_service_core.testing.readout import make_model_readout
 
 if TYPE_CHECKING:
     from grabatus_service_core.contract.readout.root import ModelReadout
@@ -14,4 +14,4 @@ if TYPE_CHECKING:
 
 @pytest.fixture
 def valid_readout() -> ModelReadout:
-    return build_valid_readout()
+    return make_model_readout()

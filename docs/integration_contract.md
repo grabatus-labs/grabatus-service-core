@@ -7,8 +7,11 @@ the error taxonomy mapped onto both. It is the source of truth — any
 disagreement between this file and an implementation is a bug in the
 implementation.
 
-The protocol is version 1.0. Breaking changes ship as a new
-`protocol_version`; additive fields ship under the same version.
+The protocol has two live versions. `1.0` is the original contract.
+`1.1` adds one thing: `model_readout` is a declared output, so the
+readout a service produces is written to storage and the platform can
+fetch it. Breaking changes ship as a new `protocol_version`; additive
+fields ship under the same version.
 
 ---
 
@@ -246,7 +249,7 @@ Every public error inherits `GrabatusServiceError` and carries a stable
 | Decode   | `MalformedMessageError`           | Pub/Sub `message.data` is not valid JSON / b64.   |
 | Contract | `InvalidContractError`            | Schema valid but a field rule fails.              |
 | Contract | `UnknownServiceError`             | `service.name` is not in the deployment registry. |
-| Contract | `UnsupportedProtocolVersionError` | `envelope.protocol_version` is not 1.0.           |
+| Contract | `UnsupportedProtocolVersionError` | `envelope.protocol_version` is neither 1.0 nor 1.1. |
 | Auth     | `UnauthorizedUriError`            | URI fails the tenant-prefix check.                |
 | Auth     | `UnsupportedSchemeError`          | URI scheme is not on the allowlist.               |
 | Auth     | `BlockedHostError`                | URI host is on the blocklist.                     |
@@ -256,6 +259,9 @@ Every public error inherits `GrabatusServiceError` and carries a stable
 | I/O      | `FormatParsingError`              | Bytes did not parse as the declared format.       |
 | Compute  | `ComputeError`                    | Service-specific compute failure.                 |
 | Compute  | `ComputeTimeoutError`             | Compute exceeded its budget.                      |
+| Compute  | `MissingReadoutError`             | Compute produced no `model_readout` role.         |
+| Compute  | `InvalidReadoutError`             | The `model_readout` fails the readout schema.     |
+| Compute  | `ReadoutMismatchError`            | The `model_readout` describes a different run.    |
 | Webhook  | `WebhookAuthError`                | JWT signing/verification failed.                  |
 | Webhook  | `WebhookError`                    | Network failure delivering the callback.          |
 
@@ -266,7 +272,14 @@ Human messages may evolve; do not match on them.
 
 ## 4. Versioning
 
-- `protocol_version: "1.0"` is the only accepted value today.
+- `protocol_version` accepts `"1.0"` and `"1.1"`.
+- Under `"1.1"` the contract **must** declare an output with role
+  `model_readout`; under `"1.0"` it must **not**. The role is owned by
+  the SDK — a service never lists it in its own `OUTPUT_ROLES`, and the
+  runner adds it to the expected set on its behalf. A contract that gets
+  this wrong fails with `InvalidContractError` before any I/O.
+- `outputs` accepts up to 11 entries: 10 service artefacts plus the
+  readout.
 - New optional fields are additive within the same version (Pydantic
   models are `extra="forbid"`, so adding a field is a breaking change
   to existing producers — the platform should always emit the latest
@@ -279,14 +292,22 @@ Human messages may evolve; do not match on them.
 
 ## 5. Model Readout
 
-Alongside the numeric artefacts a service writes, it may also emit a
+Alongside the numeric artefacts a service writes, it must also emit a
 `model_readout`: a fixed-schema JSON document that carries everything an
 LLM needs to explain a result to the client without inferring,
 recalculating, or guessing at context the numbers alone don't carry. It
 travels like any other output, under the fixed output role
-`model_readout` and format `json`. The Pydantic models live under
-`grabatus_service_core.contract.readout` (`ModelReadout` and its
-sub-models).
+`model_readout` and format `json`.
+
+**Canonical import path:** `grabatus_service_core.contract.readout`. It
+exports `ModelReadout`, every sub-model, `build_explanation_guide`, and
+the closed vocabularies a service needs to annotate its own code under
+`mypy --strict` — `ModelFamily`, `Paradigm`, `UncertaintyKind`,
+`Direction`, `Confidence`, `DiagnosticStatus`, `QualityStatus`,
+`Severity`, `FieldType`, `HyperparameterValue` and `Origin`. The modules
+beneath it (`readout.enums`, `readout.root`, …) are implementation
+detail: importing from them, or redeclaring a vocabulary locally, is how
+services drift from the schema.
 
 ### Top-level blocks (`ModelReadout`)
 
@@ -299,13 +320,29 @@ sub-models).
 | `service_knowledge` | `ServiceKnowledge`                 | yes      | What the service is, independent of any single run — see below. |
 | `model`             | `ModelDescription`                 | yes      | What was fitted, its assumptions, priors, and what it cannot answer. |
 | `data`              | `DataProvenance`                   | yes      | Shape and quality of the data behind the result.                 |
-| `artifacts`         | tuple of `ArtifactDescription`, 1–11 | yes    | A data dictionary — role, URI, format, field meanings — for each numeric artefact the service wrote. |
+| `artifacts`         | tuple of `ArtifactDescription`, 1–10 | yes    | A data dictionary — role, URI, format, field meanings — for each numeric artefact the service wrote. The bound is the contract's output budget minus the readout's own slot; the readout never describes itself. |
 | `findings`          | tuple of `Finding`, 0–50            | no       | The conclusions the service is willing to stand behind, each with its own quantity and uncertainty. |
 | `diagnostics`       | tuple of `Diagnostic`, 0–30         | no       | Quality checks already judged against their thresholds.         |
 | `overall_quality`   | `OverallQuality`                   | yes      | The single verdict on whether this result can be trusted.       |
 | `caveats`           | tuple of `Caveat`, 0–20             | no       | Limitations, each paired with what must not be concluded from it. |
 | `explanation_guide` | `ExplanationGuide`                 | yes      | Narration instructions for whichever LLM presents the result — audience, summary, guardrails. |
 | `reproducibility`   | `Reproducibility`                  | yes      | Seed, compute duration, input hashes, and library versions needed to reproduce the run. |
+
+### Cross-field invariants
+
+Four rules hold across the collections above, enforced by model
+validators rather than by any single field:
+
+- `findings` ids are unique. Two findings under one id make every
+  reference to it ambiguous.
+- `artifacts` roles are unique — the same rule the contract's `outputs`
+  already follow.
+- `reproducibility.input_digests` roles are unique. Two hashes for one
+  role make the run unreproducible, not better documented.
+- every entry of `explanation_guide.recommended_narrative_order` names an
+  id present in `findings`. A dangling reference hands the LLM an
+  instruction it can only obey by inventing the finding, which the
+  guardrails in the same document forbid.
 
 The following sections give the field-level detail for every submodel
 named above, in the same order. Nothing here is inferred from the
@@ -459,7 +496,7 @@ any particular run.
 | Field          | Type                          | Required | Constraints                                       | Meaning                                                  |
 | --------------- | ------------------------------ | -------- | ------------------------------------------------------ | --------------------------------------------------------------- |
 | `role`           | string                          | yes      | `min_length=1`, `max_length=32`, pattern `^[a-z][a-z0-9_]*$` | Matches an output role declared in the envelope's `outputs[]`. |
-| `uri`            | URL                             | yes      | valid `AnyUrl`, `max_length=2048`, scheme one of `gs`, `bigquery`, `secret` | Where the artefact was written. `data:` and `inline://` are rejected — both embed their payload directly in the URI, which would let raw data back into a document that carries none. |
+| `uri`            | URL                             | yes      | valid `AnyUrl`, `max_length=2048`, scheme one of `gs`, `bigquery`, `secret`, published as `"pattern": "^(gs\|bigquery\|secret)://"` | Where the artefact was written. `data:` and `inline://` are rejected — both embed their payload directly in the URI, which would let raw data back into a document that carries none. |
 | `format`         | literal                         | yes      | one of `xlsx`, `csv`, `json`, `parquet`, `bigquery`, `inline` | Artefact file format.                                     |
 | `description`    | string                          | yes      | `min_length=1`, `max_length=500`                        | What this artefact is.                                          |
 | `fields`         | tuple of `FieldDescription`     | yes      | `min_length=1`, `max_length=100`                        | Data dictionary for the artefact's columns.                      |
@@ -562,7 +599,7 @@ validation time:
 | `audience`                        | string            | yes      | `min_length=1`, `max_length=200`                                                 | Who the narration is written for.                                       |
 | `summary_for_llm`                 | string            | yes      | `min_length=1`, `max_length=2000`                                                | The summary the presenting LLM should base its narration on.            |
 | `what_was_solved`                 | string            | yes      | `min_length=1`, `max_length=1000`                                                | The problem this run solved.                                            |
-| `recommended_narrative_order`     | tuple of string   | no       | default `()`, `max_length=20`, each ≤64 chars (matches `Finding.id`'s own bound)  | Suggested order to narrate findings in (typically finding `id`s).       |
+| `recommended_narrative_order`     | tuple of string   | no       | default `()`, `max_length=20`, each ≤64 chars; every entry **must** be an id present in `findings` | Order to narrate the findings in. Ids only — never prose. |
 | `must_not_claim`                  | tuple of string   | yes      | `min_length=1`, `max_length=20`, each ≤500 chars                                 | Claims the presenting LLM must never make about this result.            |
 | `guardrails`                      | tuple of string   | yes      | `min_length=4` (`len(BASE_GUARDRAILS)`), `max_length=20`, each ≤500 chars; first 4 elements must equal `BASE_GUARDRAILS` verbatim, in order | Narration rules — see "The base guardrails" below for the mandatory prefix. |
 
@@ -834,21 +871,52 @@ uv run python -c "import json; from tests.unit.contract.readout.builders import 
 }
 ```
 
-### State: schema only, not yet enforced
+### State: enforced and persisted under protocol 1.1
 
-The schema above exists and is locked by a byte-for-byte JSON Schema
-snapshot test (`tests/contract_compatibility/snapshots/v1.1/model_readout.schema.json`),
-with valid and invalid fixtures exercising every model validator. **Runtime
-enforcement is not wired up yet.** No service is required to emit a
-`model_readout` today, and none is rejected for omitting or malforming
-one. The remaining wiring — a `VALIDATE_READOUT` step in the
-`ServiceRunner` between `run_compute` and `save_outputs`, the
-`MissingReadoutError` / `InvalidReadoutError` error pair (both under
-`ComputeError`, both `retriable=False`), and the `protocol_version:
-"1.1"` bump that makes the readout mandatory — belong to later phases of
-this work. Do not generate platform integration code that assumes a
-`model_readout` will always be present until that lands and this section
-is updated to say so.
+The schema above is locked by a byte-for-byte JSON Schema snapshot test
+(`tests/contract_compatibility/snapshots/v1.1/model_readout.schema.json`),
+with valid and invalid fixtures exercising every model validator.
+
+**Runtime enforcement is live.** `ServiceRunner` runs a `validate_readout`
+step between `run_compute` and `save_outputs`. A compute backend that
+returns no `model_readout` key in its `ComputeResult` fails with
+`MissingReadoutError`; one whose readout does not satisfy the schema above
+fails with `InvalidReadoutError`. Both sit under `ComputeError` and are
+`retriable=False` — a backend that omits the readout will omit it again on
+the next attempt. Both fire before anything is written to storage, so a run
+that cannot be explained produces no output at all.
+
+**Persistence follows the protocol version.** Under `1.1` the contract
+declares a `model_readout` output and the runner writes the artefact there
+like any other, so the platform fetches it by URI. Under `1.0` the readout
+is still validated but has nowhere declared to go, and is dropped after the
+check. Emit `1.1` contracts to retrieve readouts.
+
+**The service is given what the readout demands.**
+`ComputeBackendPort.run` receives a third keyword argument, `context: ComputeContext`,
+carrying the run identity the `request` and `service` blocks require:
+
+```python
+def run(self, *, inputs, parameters, context) -> ComputeResult:
+    readout = ModelReadout(
+        generated_at=context.generated_at,   # from the SDK clock, not datetime.now()
+        request=context.readout_request(),   # request/result/parameter/tenant/origin
+        service=context.readout_service(),   # name and version from the contract
+        ...                                  # everything else is the service's own
+    )
+```
+
+`ComputeContext` exposes `request_id`, `result_id`, `parameter_id`,
+`tenant_id`, `origin`, `service_name`, `service_version` and
+`generated_at`, plus the two builders above. It is a projection of the
+contract, not the contract: a backend never sees callbacks, credentials or
+URIs. `HttpComputeBackend` forwards the same fields to off-platform
+backends under a `context` key in its request envelope.
+
+After the schema check, the runner compares the readout's `request` and
+`service` blocks against the contract. A readout that is schema-valid but
+belongs to another run — a cached or copied artefact — fails with
+`ReadoutMismatchError` before anything is written.
 
 ---
 

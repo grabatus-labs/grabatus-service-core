@@ -32,4 +32,4 @@ Authorization failures raise `UriAuthorizationError` with the offending URI and 
 - Cross-tenant data access is structurally prevented at the entry point of every service.
 - Adding a new tenant requires no code change — only the contract's `identity.tenant_id` matters.
 - Test fakes (`AllowAllPolicy`) make local dev simple while real deployments default-deny.
-- The cost is that every URI in test fixtures must conform to a tenant prefix. The `examples/echo_service` and tutorials demonstrate the pattern. Composed policies are property-tested in `tests/property/test_uri_authorization_invariants.py` to ensure narrowing-only composition.
+- The cost is that every URI in test fixtures must conform to a tenant prefix. The `examples/forecast_service` and tutorials demonstrate the pattern. Composed policies are property-tested in `tests/property/test_uri_authorization_invariants.py` to ensure narrowing-only composition.

@@ -4,18 +4,21 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_validator
 
+from grabatus_service_core.contract.duplicates import duplicated
 from grabatus_service_core.contract.readout.enums import ROLE_PATTERN
 
 _FROZEN = ConfigDict(extra="forbid", frozen=True)
 
 _SHA256_PATTERN = r"^[0-9a-f]{64}$"
 
-# Not enums.MAX_ITEMS (30): this bounds input_digests and library_versions
-# specifically, and the two happen to differ in value. Keeping a distinct
-# name avoids a future refactor silently swapping one limit for the other.
-_MAX_DIGESTS = 20
+# Bounds both collections on this model — input_digests and
+# library_versions. Named for the model, not for the digests, because
+# library versions are not digests and the old _MAX_DIGESTS said they
+# were. Deliberately not enums.MAX_ITEMS (30): a future refactor must
+# not silently swap one limit for the other.
+_MAX_PROVENANCE_ITEMS = 20
 
 # Library names are short identifiers (e.g. "mlxtend"); versions are short
 # version strings (e.g. "0.23.1"). Neither is a place for raw data — an
@@ -43,7 +46,19 @@ class Reproducibility(BaseModel):
 
     random_seed: int | None = None
     compute_duration_seconds: float = Field(ge=0.0)
-    input_digests: tuple[InputDigest, ...] = Field(min_length=1, max_length=_MAX_DIGESTS)
+    input_digests: tuple[InputDigest, ...] = Field(min_length=1, max_length=_MAX_PROVENANCE_ITEMS)
     library_versions: dict[_LibraryName, _LibraryVersion] = Field(
-        min_length=1, max_length=_MAX_DIGESTS
+        min_length=1, max_length=_MAX_PROVENANCE_ITEMS
     )
+
+    @field_validator("input_digests")
+    @classmethod
+    def _digest_roles_are_unique(
+        cls,
+        digests: tuple[InputDigest, ...],
+    ) -> tuple[InputDigest, ...]:
+        """Two hashes for one role make the run unreproducible, not better documented."""
+        repeated = duplicated(digest.role for digest in digests)
+        if repeated:
+            raise ValueError(f"input_digest roles must be unique, got duplicates={repeated!r}")
+        return digests

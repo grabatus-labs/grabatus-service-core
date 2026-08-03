@@ -42,6 +42,7 @@
           "format": "uri",
           "maxLength": 2048,
           "minLength": 1,
+          "pattern": "^(gs|bigquery|secret)://",
           "title": "Uri",
           "type": "string"
         }
@@ -1239,7 +1240,7 @@
       "items": {
         "$ref": "#/$defs/ArtifactDescription"
       },
-      "maxItems": 11,
+      "maxItems": 10,
       "minItems": 1,
       "title": "Artifacts",
       "type": "array"
